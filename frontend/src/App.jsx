@@ -1,0 +1,24 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import GoogleCallback from './pages/GoogleCallback';
+import StudentDashboard from './pages/StudentDashboard';
+import TeacherDashboard from './pages/TeacherDashboard';
+
+function App() {
+  return (
+    <Router>
+      <div className="min-h-screen bg-gray-900">
+        <Routes>
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/google/callback" element={<GoogleCallback />} />
+          <Route path="/student" element={<StudentDashboard />} />
+          <Route path="/teacher" element={<TeacherDashboard />} />
+        </Routes>
+      </div>
+    </Router>
+  );
+}
+
+export default App;
