@@ -15,7 +15,7 @@ type User struct {
 }
 
 type StudentContainer struct {
-	StudentID      primitive.ObjectID `bson:"student_id" json:"student_id"`
+	ID             primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	QuestionPapers []struct {
 		QuestionPaperID primitive.ObjectID `bson:"question_paper_id" json:"question_paper_id"`
 		AnswerSheetID   primitive.ObjectID `bson:"answer_sheet_id" json:"answer_sheet_id"`
@@ -23,8 +23,8 @@ type StudentContainer struct {
 }
 
 type TeacherContainer struct {
-	TeacherID primitive.ObjectID `bson:"teacher_id" json:"teacher_id"`
-	Exams     []struct {
+	ID    primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Exams []struct {
 		ExamID       primitive.ObjectID `bson:"exam_id" json:"exam_id"`
 		EvaluationID primitive.ObjectID `bson:"evaluation_id" json:"evaluation_id"`
 	} `bson:"exams" json:"exams"`

@@ -91,7 +91,7 @@ func GoogleCallback(c *gin.Context) {
 		containerID := primitive.NewObjectID()
 		if role == "student" {
 			studentContainer := models.StudentContainer{
-				StudentID: containerID,
+				ID: containerID,
 				QuestionPapers: []struct {
 					QuestionPaperID primitive.ObjectID `bson:"question_paper_id" json:"question_paper_id"`
 					AnswerSheetID   primitive.ObjectID `bson:"answer_sheet_id" json:"answer_sheet_id"`
@@ -100,7 +100,7 @@ func GoogleCallback(c *gin.Context) {
 			studentContainerCollection.InsertOne(context.TODO(), studentContainer)
 		} else {
 			teacherContainer := models.TeacherContainer{
-				TeacherID: containerID,
+				ID: containerID,
 				Exams: []struct {
 					ExamID       primitive.ObjectID `bson:"exam_id" json:"exam_id"`
 					EvaluationID primitive.ObjectID `bson:"evaluation_id" json:"evaluation_id"`
