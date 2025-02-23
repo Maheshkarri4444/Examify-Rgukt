@@ -20,6 +20,8 @@ import (
 )
 
 var userCollection *mongo.Collection = config.GetCollection(config.Client, "users")
+var studentContainerCollection *mongo.Collection = config.GetCollection(config.Client, "student_containers")
+var teacherContainerCollection *mongo.Collection = config.GetCollection(config.Client, "teacher_containers")
 
 var googleOauthConfig = &oauth2.Config{
 	ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
@@ -86,15 +88,37 @@ func GoogleCallback(c *gin.Context) {
 	err = userCollection.FindOne(context.TODO(), bson.M{"email": email}).Decode(&user)
 
 	if err == mongo.ErrNoDocuments {
+		containerID := primitive.NewObjectID()
+		if role == "student" {
+			studentContainer := models.StudentContainer{
+				StudentID: containerID,
+				QuestionPapers: []struct {
+					QuestionPaperID primitive.ObjectID `bson:"question_paper_id" json:"question_paper_id"`
+					AnswerSheetID   primitive.ObjectID `bson:"answer_sheet_id" json:"answer_sheet_id"`
+				}{},
+			}
+			studentContainerCollection.InsertOne(context.TODO(), studentContainer)
+		} else {
+			teacherContainer := models.TeacherContainer{
+				TeacherID: containerID,
+				Exams: []struct {
+					ExamID       primitive.ObjectID `bson:"exam_id" json:"exam_id"`
+					EvaluationID primitive.ObjectID `bson:"evaluation_id" json:"evaluation_id"`
+				}{},
+			}
+			teacherContainerCollection.InsertOne(context.TODO(), teacherContainer)
+		}
+
 		user = models.User{
-			ID:        primitive.NewObjectID(),
-			Name:      name,
-			Email:     email,
-			GoogleID:  googleID,
-			Image:     image,
-			Role:      role,
-			CreatedAt: primitive.NewDateTimeFromTime(time.Now()),
-			UpdatedAt: primitive.NewDateTimeFromTime(time.Now()),
+			ID:          primitive.NewObjectID(),
+			Name:        name,
+			Email:       email,
+			GoogleID:    googleID,
+			Image:       image,
+			Role:        role,
+			ContainerID: containerID,
+			CreatedAt:   primitive.NewDateTimeFromTime(time.Now()),
+			UpdatedAt:   primitive.NewDateTimeFromTime(time.Now()),
 		}
 		_, err := userCollection.InsertOne(context.TODO(), user)
 		if err != nil {
