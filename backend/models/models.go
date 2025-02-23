@@ -29,3 +29,17 @@ type TeacherContainer struct {
 		EvaluationID primitive.ObjectID `bson:"evaluation_id" json:"evaluation_id"`
 	} `bson:"exams" json:"exams"`
 }
+
+type Exam struct {
+	ID             primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
+	ExamName       string               `bson:"exam_name" json:"exam_name"`
+	ExamType       string               `bson:"exam_type" json:"exam_type" validate:"oneof=external internal viva"`
+	AvailableDates []primitive.DateTime `bson:"available_dates" json:"available_dates"`
+	Questions      []Question           `bson:"questions" json:"questions"`
+	Sets           []primitive.ObjectID `bson:"sets" json:"sets"`
+	AnswerSheets   []primitive.ObjectID `bson:"answer_sheets" json:"answer_sheets"`
+}
+type Question struct {
+	Question string   `bson:"question" json:"question"`
+	Types    []string `bson:"types" json:"types"`
+}
