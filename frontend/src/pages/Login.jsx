@@ -8,19 +8,19 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
-      <div className="max-w-md w-full space-y-8 bg-gray-800 p-8 rounded-xl shadow-lg animate-scale-in border-2 border-blue-500/20">
-        <div className="text-center space-y-4">
-          <div className="mx-auto flex content-center items-center w-24 h-28 rounded-lg duration-300 transition-all hover:bg-gray-100 bg-white hover:scale-110 animate-float border-2 border-blue-300">
+    <div className="flex items-center justify-center min-h-screen p-4 bg-gray-900">
+      <div className="w-full max-w-md p-8 space-y-8 bg-gray-800 border-2 shadow-lg rounded-xl animate-scale-in border-blue-500/20">
+        <div className="space-y-4 text-center">
+          <div className="flex items-center content-center w-24 mx-auto transition-all duration-300 bg-white border-2 border-blue-300 rounded-lg h-28 hover:bg-gray-100 hover:scale-110 animate-float">
             <img 
               src={rguktLogo} 
               alt="Examify Logo" 
-              className="mx-auto h-17 w-16"
+              className="w-16 mx-auto h-17"
             />
           </div>
           
           <div className="space-y-2 animate-fade-slide-up" style={{ animationDelay: '200ms' }}>
-            <h2 className="text-3xl font-bold text-white hover:tracking-wide transition-all duration-300">
+            <h2 className="text-3xl font-bold text-white transition-all duration-300 hover:tracking-wide">
               Welcome to Examify
             </h2>
             <p className="text-sm text-gray-400">Please sign in to continue</p>
@@ -30,14 +30,14 @@ function Login() {
         <div className="mt-8 animate-fade-slide-up" style={{ animationDelay: '400ms' }}>
           <button
             onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center px-4 py-3 bg-white hover:bg-gray-100 text-gray-800 font-medium rounded-lg transition-all duration-300 hover:shadow-xl hover:scale-105 group border border-blue-300 hover:border-blue-500"
+            className="flex items-center justify-center w-full px-4 py-3 font-medium text-gray-800 transition-all duration-300 bg-white border border-blue-300 rounded-lg hover:bg-gray-100 hover:shadow-xl hover:scale-105 group hover:border-blue-500"
           >
             <img
               src="https://www.google.com/favicon.ico"
               alt="Google"
-              className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform duration-300"
+              className="w-5 h-5 mr-2 transition-transform duration-300 group-hover:rotate-180"
             />
-            <span className="group-hover:translate-x-1 transition-transform duration-300">
+            <span className="transition-transform duration-300 group-hover:translate-x-1">
               Continue with Google
             </span>
           </button>

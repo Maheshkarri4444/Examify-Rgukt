@@ -13,6 +13,10 @@ const Allapi = {
     url: `${backapi}/exam/create-exam`,
     method: "POST",
   },
+  updateExam: {
+    url: `${backapi}/exam/update-exam`,
+    method: "PUT",
+  },
   getExams: {
     url: `${backapi}/exam/getexamsbycontainer`,
     method: "GET",
@@ -21,10 +25,19 @@ const Allapi = {
     url: (id) => `${backapi}/exam/getexambyid?id=${id}`,
     method: "GET",
   },
-  updateExam: {
-    url: `${backapi}/exam/update-exam`,
-    method: "PUT",
-  }
+  getAllExams: {
+    url: `${backapi}/exam/getallexams`,
+    method: "GET",
+  },
+  createSets: {
+    url: `${backapi}/exam/exam/create-sets`,
+    method: "POST",
+  },
+  getQuestionPaper: {
+    url: (id) => `${backapi}/exam/qpaper/${id}`,
+    method: "GET",
+  },
+  backapi
 };
 
 export default Allapi;

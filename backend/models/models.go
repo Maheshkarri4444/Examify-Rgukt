@@ -35,11 +35,20 @@ type Exam struct {
 	ExamName       string               `bson:"exam_name" json:"exam_name"`
 	ExamType       string               `bson:"exam_type" json:"exam_type" validate:"oneof=external internal viva"`
 	AvailableDates []primitive.DateTime `bson:"available_dates" json:"available_dates"`
+	Duration       int64                `bson:"duration" json:"duration"` // Duration field added
 	Questions      []Question           `bson:"questions" json:"questions"`
 	Sets           []primitive.ObjectID `bson:"sets" json:"sets"`
 	AnswerSheets   []primitive.ObjectID `bson:"answer_sheets" json:"answer_sheets"`
 }
+
 type Question struct {
 	Question string   `bson:"question" json:"question"`
-	Types    []string `bson:"types" json:"types"`
+	Types    []string `bson:"types" json:"types" validate:"dive,oneof=html css js jquery php nodejs mongodb python java"`
+	Level    string   `bson:"level" json:"level" validate:"oneof=easy medium hard"`
+}
+
+type QuestionPaper struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Set       int                `bson:"set" json:"set"`
+	Questions []Question         `bson:"questions" json:"questions"`
 }

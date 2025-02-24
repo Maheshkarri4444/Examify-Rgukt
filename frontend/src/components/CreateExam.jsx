@@ -1,26 +1,47 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Plus, X } from 'lucide-react';
+import { ArrowLeft, Plus, X, Shuffle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Allapi from '../utils/common';
+
+const QUESTION_TYPES = ['html', 'css', 'js', 'jquery', 'php', 'nodejs', 'mongodb', 'python', 'java'];
+const DIFFICULTY_LEVELS = ['easy', 'medium', 'hard'];
 
 function CreateExam() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     exam_name: '',
     exam_type: 'internal',
+    duration: '', // Initialize as empty string
     available_dates: [],
     questions: []
   });
+
   const [newQuestion, setNewQuestion] = useState({
     question: '',
-    types: []
+    types: [],
+    level: 'medium'
   });
+
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
+  const [selectedType, setSelectedType] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("token",localStorage.getItem('token'))
+    
+    // Convert duration to number and validate
+    const durationNum = parseInt(formData.duration);
+    if (isNaN(durationNum) || durationNum <= 0) {
+      alert('Please enter a valid duration in minutes');
+      return;
+    }
+    console.log("form data: ",formData)
+    // Create submission data with duration as number
+    const submissionData = {
+      ...formData,
+      duration: durationNum
+    };
+    console.log("sub data: ",submissionData)
     try {
       const response = await fetch(Allapi.createExam.url, {
         method: Allapi.createExam.method,
@@ -28,7 +49,7 @@ function CreateExam() {
           'Content-Type': 'application/json',
           'Authorization': `${localStorage.getItem('token')}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(submissionData)
       });
 
       if (response.ok) {
@@ -53,13 +74,31 @@ function CreateExam() {
   };
 
   const addQuestion = () => {
-    if (newQuestion.question.trim() && newQuestion.types.length > 0) {
+    if (newQuestion.question.trim() && newQuestion.types.length > 0 && newQuestion.level) {
       setFormData(prev => ({
         ...prev,
         questions: [...prev.questions, { ...newQuestion }]
       }));
-      setNewQuestion({ question: '', types: [] });
+      setNewQuestion({ question: '', types: [], level: 'medium' });
+      setSelectedType('');
     }
+  };
+
+  const addType = () => {
+    if (selectedType && !newQuestion.types.includes(selectedType)) {
+      setNewQuestion(prev => ({
+        ...prev,
+        types: [...prev.types, selectedType]
+      }));
+      setSelectedType('');
+    }
+  };
+
+  const removeType = (typeToRemove) => {
+    setNewQuestion(prev => ({
+      ...prev,
+      types: prev.types.filter(type => type !== typeToRemove)
+    }));
   };
 
   const removeQuestion = (index) => {
@@ -85,6 +124,13 @@ function CreateExam() {
     setFormData(prev => ({
       ...prev,
       available_dates: prev.available_dates.filter((_, i) => i !== index)
+    }));
+  };
+
+  const shuffleQuestions = () => {
+    setFormData(prev => ({
+      ...prev,
+      questions: [...prev.questions].sort(() => Math.random() - 0.5)
     }));
   };
 
@@ -130,6 +176,21 @@ function CreateExam() {
               <option value="external">External</option>
               <option value="viva">Viva</option>
             </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-300">
+              Duration (in minutes)
+            </label>
+            <input
+              type="number"
+              name="duration"
+              value={formData.duration}
+              onChange={handleChange}
+              min="1"
+              className="w-full px-4 py-2 text-white transition-colors duration-300 bg-gray-700 border-2 border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+              placeholder="Enter duration in minutes"
+            />
           </div>
 
           <div className="space-y-4">
@@ -179,10 +240,20 @@ function CreateExam() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-white">Questions</h2>
+            {formData.questions.length > 1 && (
+              <button
+                type="button"
+                onClick={shuffleQuestions}
+                className="flex items-center px-4 py-2 text-purple-400 transition-all duration-300 rounded-lg bg-purple-500/20 hover:bg-purple-500/30"
+              >
+                <Shuffle className="w-5 h-5 mr-2" />
+                Shuffle Questions
+              </button>
+            )}
           </div>
 
           <div className="space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-4">
               <input
                 type="text"
                 value={newQuestion.question}
@@ -190,14 +261,37 @@ function CreateExam() {
                 placeholder="Enter question"
                 className="w-full px-4 py-2 text-white transition-colors duration-300 bg-gray-700 border-2 border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
               />
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={newQuestion.types.join(', ')}
-                  onChange={(e) => setNewQuestion(prev => ({ ...prev, types: e.target.value.split(',').map(t => t.trim()) }))}
-                  placeholder="Enter types (comma-separated)"
+              
+              <div className="flex space-x-4">
+                <select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
                   className="flex-1 px-4 py-2 text-white transition-colors duration-300 bg-gray-700 border-2 border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
-                />
+                >
+                  <option value="">Select Type</option>
+                  {QUESTION_TYPES.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={addType}
+                  className="px-4 py-2 text-blue-400 transition-all duration-300 rounded-lg bg-blue-500/20 hover:bg-blue-500/30"
+                >
+                  Add Type
+                </button>
+              </div>
+
+              <div className="flex space-x-4">
+                <select
+                  value={newQuestion.level}
+                  onChange={(e) => setNewQuestion(prev => ({ ...prev, level: e.target.value }))}
+                  className="flex-1 px-4 py-2 text-white transition-colors duration-300 bg-gray-700 border-2 border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
+                >
+                  {DIFFICULTY_LEVELS.map(level => (
+                    <option key={level} value={level}>{level}</option>
+                  ))}
+                </select>
                 <button
                   type="button"
                   onClick={addQuestion}
@@ -207,15 +301,50 @@ function CreateExam() {
                   Add Question
                 </button>
               </div>
+
+              {newQuestion.types.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {newQuestion.types.map(type => (
+                    <span
+                      key={type}
+                      className="flex items-center px-3 py-1 space-x-2 text-sm text-blue-400 rounded-full bg-blue-500/20"
+                    >
+                      <span>{type}</span>
+                      <button
+                        onClick={() => removeType(type)}
+                        className="text-blue-400 hover:text-blue-300"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
               {formData.questions.map((q, index) => (
                 <div key={index} className="p-4 space-y-2 bg-gray-700 rounded-lg">
                   <div className="flex items-start justify-between">
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <p className="text-white">{q.question}</p>
-                      <p className="text-sm text-gray-400">Types: {q.types.join(', ')}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {q.types.map((type, typeIndex) => (
+                          <span
+                            key={typeIndex}
+                            className="px-2 py-1 text-sm text-blue-400 rounded-full bg-blue-500/20"
+                          >
+                            {type}
+                          </span>
+                        ))}
+                        <span className={`px-2 py-1 text-sm rounded-full ${
+                          q.level === 'easy' ? 'bg-green-500/20 text-green-400' :
+                          q.level === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                          'bg-red-500/20 text-red-400'
+                        }`}>
+                          {q.level}
+                        </span>
+                      </div>
                     </div>
                     <button
                       type="button"
