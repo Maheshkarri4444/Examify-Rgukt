@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -37,8 +38,8 @@ func CreateExam(c *gin.Context) {
 	}
 
 	// Add exam ID to teacher's container
-	teacherID := c.MustGet("user_id").(primitive.ObjectID)
-	filter := bson.M{"_id": teacherID}
+	containerID := c.MustGet("container_id").(primitive.ObjectID)
+	filter := bson.M{"_id": containerID}
 	update := bson.M{"$push": bson.M{"exams": bson.M{"exam_id": exam.ID}}}
 	_, err = teacherContainerCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
@@ -112,7 +113,7 @@ func GetExamById(c *gin.Context) {
 }
 
 func GetExamsByTeacherContainer(c *gin.Context) {
-	teacherID := c.MustGet("user_id").(primitive.ObjectID)
+	containerID := c.MustGet("container_id").(primitive.ObjectID)
 	var teacherContainer struct {
 		Exams []struct {
 			ExamID primitive.ObjectID `bson:"exam_id"`
@@ -121,12 +122,12 @@ func GetExamsByTeacherContainer(c *gin.Context) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	err := teacherContainerCollection.FindOne(ctx, bson.M{"_id": teacherID}).Decode(&teacherContainer)
+	err := teacherContainerCollection.FindOne(ctx, bson.M{"_id": containerID}).Decode(&teacherContainer)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Teacher container not found"})
 		return
 	}
-
+	fmt.Println("teacher container: ", teacherContainer)
 	examIDs := make([]primitive.ObjectID, len(teacherContainer.Exams))
 	for i, e := range teacherContainer.Exams {
 		examIDs[i] = e.ExamID
@@ -148,6 +149,6 @@ func GetExamsByTeacherContainer(c *gin.Context) {
 		}
 		exams = append(exams, exam)
 	}
-
+	fmt.Println("exams: ", exams)
 	c.JSON(http.StatusOK, exams)
 }

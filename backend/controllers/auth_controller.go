@@ -79,7 +79,7 @@ func GoogleCallback(c *gin.Context) {
 	googleID, _ := userInfo["id"].(string)
 	image, _ := userInfo["picture"].(string) //url of image
 
-	role := "teaher"
+	role := "teacher"
 	if strings.HasSuffix(email, "@rguktn.ac.in") {
 		role = "student"
 	}

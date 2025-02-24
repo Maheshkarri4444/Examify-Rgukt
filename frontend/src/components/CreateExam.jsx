@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Plus, Shuffle, X } from 'lucide-react';
+import { ArrowLeft, Plus, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Allapi from '../utils/common';
 
@@ -11,7 +11,6 @@ function CreateExam() {
     available_dates: [],
     questions: []
   });
-  const [shuffleCount, setShuffleCount] = useState('');
   const [newQuestion, setNewQuestion] = useState({
     question: '',
     types: []
@@ -21,18 +20,20 @@ function CreateExam() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("token",localStorage.getItem('token'))
     try {
       const response = await fetch(Allapi.createExam.url, {
         method: Allapi.createExam.method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `${localStorage.getItem('token')}`
         },
         body: JSON.stringify(formData)
       });
 
       if (response.ok) {
-        navigate('/teacher/exams');
+        const data = await response.json();
+        navigate(`/teacher/exams/${data.exam_id}`);
       } else {
         const error = await response.json();
         alert(error.error || 'Failed to create exam');
@@ -230,25 +231,7 @@ function CreateExam() {
           </div>
         </div>
 
-        <div className="flex items-center pt-4 space-x-4 border-t border-gray-700">
-          <div className="flex-1">
-            <div className="flex items-center space-x-4">
-              <input
-                type="number"
-                value={shuffleCount}
-                onChange={(e) => setShuffleCount(e.target.value)}
-                placeholder="Enter number of variations"
-                className="w-48 px-4 py-2 text-white transition-colors duration-300 bg-gray-700 border-2 border-gray-600 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-              <button 
-                type="button"
-                className="flex items-center px-4 py-2 text-purple-400 transition-all duration-300 rounded-lg bg-purple-500/20 hover:bg-purple-500/30"
-              >
-                <Shuffle className="w-5 h-5 mr-2" />
-                Generate Variations
-              </button>
-            </div>
-          </div>
+        <div className="flex justify-end pt-4 border-t border-gray-700">
           <button 
             type="submit"
             className="px-6 py-2 text-white transition-all duration-300 bg-blue-500 rounded-lg hover:bg-blue-600 hover:scale-105"
