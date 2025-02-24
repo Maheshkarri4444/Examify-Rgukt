@@ -6,6 +6,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func VerifyJWT(tokenString string) (jwt.MapClaims, error) {
@@ -25,7 +26,7 @@ func VerifyJWT(tokenString string) (jwt.MapClaims, error) {
 	return claims, nil
 }
 
-func StudentMiddleware() gin.HandlerFunc {
+func AuthMiddleware(requiredRole string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString := c.GetHeader("Authorization")
 		if tokenString == "" {
@@ -41,38 +42,37 @@ func StudentMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		if role, ok := claims["role"].(string); !ok || role != "student" {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied: Students only"})
+		userID, ok := claims["user_id"].(string)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
 			c.Abort()
 			return
 		}
 
+		role, ok := claims["role"].(string)
+		if !ok || role != requiredRole {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			c.Abort()
+			return
+		}
+
+		objectID, err := primitive.ObjectIDFromHex(userID)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
+			c.Abort()
+			return
+		}
+
+		c.Set("user_id", objectID)
+		c.Set("role", role)
 		c.Next()
 	}
 }
 
+func StudentMiddleware() gin.HandlerFunc {
+	return AuthMiddleware("student")
+}
+
 func TeacherMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		tokenString := c.GetHeader("Authorization")
-		if tokenString == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization token required"})
-			c.Abort()
-			return
-		}
-
-		claims, err := VerifyJWT(tokenString)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-			c.Abort()
-			return
-		}
-
-		if role, ok := claims["role"].(string); !ok || role != "teacher" {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied: Teachers only"})
-			c.Abort()
-			return
-		}
-
-		c.Next()
-	}
+	return AuthMiddleware("teacher")
 }
