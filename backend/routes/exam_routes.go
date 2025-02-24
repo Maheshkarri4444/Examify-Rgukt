@@ -14,6 +14,7 @@ func ExamRoutes(r *gin.Engine) {
 
 		exam.GET("/getallexams", controllers.GetAllExams)
 		exam.GET("/getexambyid", controllers.GetExamById)
+		exam.GET("/getexamsbycontainer", middleware.TeacherMiddleware(), controllers.GetExamsByTeacherContainer)
 
 	}
 
