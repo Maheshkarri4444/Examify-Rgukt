@@ -245,7 +245,11 @@ func CreateSetsForExam(c *gin.Context) {
 		// Store Question Paper ID
 		createdSets = append(createdSets, questionPaper.ID)
 	}
-
+	_, err = examCollection.UpdateOne(ctx, bson.M{"_id": examID}, bson.M{"$set": bson.M{"sets": []primitive.ObjectID{}}})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset existing question paper sets"})
+		return
+	}
 	// Update Exam Document with Created Sets
 	_, err = examCollection.UpdateOne(ctx, bson.M{"_id": examID}, bson.M{"$set": bson.M{"sets": createdSets}})
 	if err != nil {
