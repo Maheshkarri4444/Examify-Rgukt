@@ -3,7 +3,7 @@ import { ArrowLeft, Plus, X, Shuffle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Allapi from '../utils/common';
 
-const QUESTION_TYPES = ['html', 'css', 'js', 'jquery', 'php', 'nodejs', 'mongodb', 'python', 'java'];
+const QUESTION_TYPES = ['html', 'css', 'js', 'jquery', 'php', 'nodejs', 'mongodb', 'python', 'java', 'text' , 'none'];
 const DIFFICULTY_LEVELS = ['easy', 'medium', 'hard'];
 
 function CreateExam() {

@@ -93,6 +93,7 @@ func GoogleCallback(c *gin.Context) {
 			studentContainer := models.StudentContainer{
 				ID: containerID,
 				QuestionPapers: []struct {
+					ExamID          primitive.ObjectID `bson:"exam_id" json:"exam_id"`
 					QuestionPaperID primitive.ObjectID `bson:"question_paper_id" json:"question_paper_id"`
 					AnswerSheetID   primitive.ObjectID `bson:"answer_sheet_id" json:"answer_sheet_id"`
 				}{},

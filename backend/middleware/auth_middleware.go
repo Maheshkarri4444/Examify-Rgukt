@@ -61,6 +61,9 @@ func AuthMiddleware(requiredRole string) gin.HandlerFunc {
 		// Fetch user from the database using email
 		var user struct {
 			ID          primitive.ObjectID `bson:"_id"`
+			Name        string             `bson:"name,omitempty" json:"name"`
+			Email       string             `bson:"email" json:"email"`
+			Image       string             `bson:"image,omitempty" json:"image,omitempty"` // Google profile image URL
 			Role        string             `bson:"role"`
 			ContainerID primitive.ObjectID `bson:"contianer_id"`
 		}
@@ -83,7 +86,10 @@ func AuthMiddleware(requiredRole string) gin.HandlerFunc {
 
 		// Set user ID and role in context
 		c.Set("user_id", user.ID)
+		c.Set("name", user.Name)
+		c.Set("email", user.Email)
 		c.Set("role", user.Role)
+		c.Set("image", user.Image)
 		c.Set("container_id", user.ContainerID)
 		c.Next()
 	}

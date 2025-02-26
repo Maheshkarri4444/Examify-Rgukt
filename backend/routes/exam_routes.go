@@ -17,6 +17,30 @@ func ExamRoutes(r *gin.Engine) {
 		exam.GET("/getexambyid", middleware.TeacherMiddleware(), controllers.GetExamById)
 		exam.GET("/getexamsbycontainer", middleware.TeacherMiddleware(), controllers.GetExamsByTeacherContainer)
 
+		exam.GET("/getexamsbydate", middleware.StudentMiddleware(), controllers.GetAvailableExamsByDate)
+		exam.POST("/assignsetandcreateanswersheet/:qpaperid", middleware.StudentMiddleware(), controllers.AssignSetAndCreateAnswerSheet)
+
+		exam.POST("/start-exam/:answerSheetId", middleware.StudentMiddleware(), controllers.StartExam)
+		exam.POST("/submit-exam/:answerSheetId", middleware.StudentMiddleware(), controllers.SubmitExam)
+
+		//student
+		//getexamsbydate
+		//getsetandcreateanswersheet-post //searches that exam id in student container
+		//if not it will assign a qpaper and answersheet with empty answers, this answersheet id will be pushed to the examdata , and return answersheet
+		//if there is already examid and not submited return the answesheet
+		//aiscore-post
+
+		//after submission generate aiscore and backend push to the answersheet
+
+		//evalution
+		//getallanswersheetsbyexamid
+		//createevalutionforanssheet--created answersheet with name email qutions and answers from anssheet
+		//aievaluate-post
+
+		//result
+		//getevalutionpaperbyansid
+		//getresultsbyexamid
+
 	}
 
 }

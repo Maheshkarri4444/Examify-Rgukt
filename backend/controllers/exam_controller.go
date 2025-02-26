@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var examCollection *mongo.Collection = config.GetCollection(config.Client, "exams")
@@ -295,4 +296,237 @@ func GetQuestionPaperByID(c *gin.Context) {
 
 	// Return the question paper details
 	c.JSON(http.StatusOK, questionPaper)
+}
+
+func GetAvailableExamsByDate(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	today := time.Now().UTC().Truncate(24 * time.Hour)
+
+	filter := bson.M{"available_dates": bson.M{"$elemMatch": bson.M{"$eq": today}}}
+	options := options.Find().SetProjection(bson.M{
+		"_id":       1,
+		"exam_name": 1,
+		"exam_type": 1,
+		"duration":  1,
+	})
+
+	cursor, err := examCollection.Find(ctx, filter, options)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	var exams []bson.M
+	if err = cursor.All(ctx, &exams); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, exams)
+}
+
+var answerSheetCollection *mongo.Collection = config.GetCollection(config.Client, "answersheets")
+
+func AssignSetAndCreateAnswerSheet(c *gin.Context) {
+	examID := c.Param("qpaperid")
+	userID, _ := c.Get("user_id")
+	userEmail, _ := c.Get("email")
+	userName, _ := c.Get("name")
+
+	examObjID, err := primitive.ObjectIDFromHex(examID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid exam ID"})
+		return
+	}
+
+	// Fetch the student's existing container
+	var studentContainer struct {
+		Sets []primitive.ObjectID `bson:"sets"`
+	}
+	err = config.GetCollection(config.Client, "users").FindOne(context.TODO(), bson.M{"_id": userID}).Decode(&studentContainer)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch student data"})
+		return
+	}
+
+	// Check if the exam is already assigned
+	for _, assignedExam := range studentContainer.Sets {
+		if assignedExam == examObjID {
+			var existingAnswerSheet bson.M
+			err := answerSheetCollection.FindOne(context.TODO(), bson.M{"exam_id": examObjID, "email": userEmail, "submitted": false}).Decode(&existingAnswerSheet)
+			if err == nil {
+				c.JSON(http.StatusOK, existingAnswerSheet)
+				return
+			}
+		}
+	}
+
+	// Fetch exam details
+	var exam struct {
+		Name         string               `bson:"name"`
+		ExamType     string               `bson:"exam_type"`
+		Sets         []primitive.ObjectID `bson:"sets"`
+		AnswerSheets []primitive.ObjectID `bson:"answersheets"`
+		Duration     int64                `bson:"duration"`
+	}
+	err = examCollection.FindOne(context.TODO(), bson.M{"_id": examObjID}).Decode(&exam)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Exam not found"})
+		return
+	}
+
+	// Find unassigned question paper
+	assignedQPaperMap := make(map[primitive.ObjectID]bool)
+	for _, ansSheetID := range exam.AnswerSheets {
+		var ansSheet struct {
+			QPaperID primitive.ObjectID `bson:"qpaper_id"`
+		}
+		answerSheetCollection.FindOne(context.TODO(), bson.M{"_id": ansSheetID}).Decode(&ansSheet)
+		assignedQPaperMap[ansSheet.QPaperID] = true
+	}
+
+	var selectedQPaperID primitive.ObjectID
+	for _, set := range exam.Sets {
+		if !assignedQPaperMap[set] {
+			selectedQPaperID = set
+			break
+		}
+	}
+
+	// If no unique question paper found, assign a random one
+	if selectedQPaperID.IsZero() {
+		rand.Seed(time.Now().UnixNano())
+		selectedQPaperID = exam.Sets[rand.Intn(len(exam.Sets))]
+	}
+
+	// Fetch question paper
+	var qPaper struct {
+		Questions []struct {
+			Question string `bson:"question"`
+			Type     string `bson:"type"`
+		} `bson:"questions"`
+	}
+	err = config.GetCollection(config.Client, "questionpapers").FindOne(context.TODO(), bson.M{"_id": selectedQPaperID}).Decode(&qPaper)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Question paper not found"})
+		return
+	}
+
+	// Prepare answer sheet data
+	answers := make([]bson.M, len(qPaper.Questions))
+	for i, q := range qPaper.Questions {
+		answers[i] = bson.M{"question": q.Question, "type": q.Type, "ans": ""}
+	}
+
+	answerSheet := bson.M{
+		"name":       userName,
+		"email":      userEmail,
+		"exam_name":  exam.Name,
+		"exam_id":    examObjID,
+		"exam_type":  exam.ExamType,
+		"qpaper_id":  selectedQPaperID,
+		"set_number": selectedQPaperID,
+		"status":     "didnotstart",
+		"submitted":  false,
+		"data":       answers,
+		"duration":   exam.Duration,
+	}
+	if exam.ExamType == "internal" {
+		answerSheet["status"] = "internal"
+	}
+
+	// Insert answer sheet
+	result, err := answerSheetCollection.InsertOne(context.TODO(), answerSheet)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create answer sheet"})
+		return
+	}
+	ansSheetID := result.InsertedID.(primitive.ObjectID)
+
+	// Update exam data to store answer sheet ID
+	examCollection.UpdateOne(context.TODO(), bson.M{"_id": examObjID}, bson.M{"$push": bson.M{"answersheets": ansSheetID}})
+
+	c.JSON(http.StatusOK, answerSheet)
+}
+
+func StartExam(c *gin.Context) {
+	answerSheetID := c.Param("answerSheetId")
+	objID, err := primitive.ObjectIDFromHex(answerSheetID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid answerSheet ID"})
+		return
+	}
+
+	// Update the status to "started"
+	update := bson.M{"$set": bson.M{"status": "started"}}
+	_, err = answerSheetCollection.UpdateOne(context.TODO(), bson.M{"_id": objID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start the exam"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Exam started successfully"})
+}
+
+// Submit Exam - Updates the status to "ended", marks submitted as true, and stores the answers
+func SubmitExam(c *gin.Context) {
+	answerSheetID := c.Param("answerSheetId")
+	objID, err := primitive.ObjectIDFromHex(answerSheetID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid answerSheet ID"})
+		return
+	}
+
+	// Define request body structure
+	var requestBody struct {
+		Answers []struct {
+			Question string `json:"question"`
+			Type     string `json:"type"`
+			Answer   string `json:"answer"`
+		} `json:"answers"`
+	}
+
+	// Bind request body
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Find the answer sheet
+	var answerSheet struct {
+		ID     primitive.ObjectID `bson:"_id"`
+		Status string             `bson:"status"`
+	}
+
+	err = answerSheetCollection.FindOne(context.TODO(), bson.M{"_id": objID}).Decode(&answerSheet)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Answer sheet not found"})
+		return
+	}
+
+	// Ensure the exam was started before submitting
+	if answerSheet.Status != "started" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Exam has not been started"})
+		return
+	}
+
+	// Update the answer sheet with the submitted answers
+	update := bson.M{
+		"$set": bson.M{
+			"status":    "ended",
+			"submitted": true,
+			"data":      requestBody.Answers,
+		},
+	}
+
+	_, err = answerSheetCollection.UpdateOne(context.TODO(), bson.M{"_id": objID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to submit the exam"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Exam submitted successfully"})
 }

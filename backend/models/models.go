@@ -17,6 +17,7 @@ type User struct {
 type StudentContainer struct {
 	ID             primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	QuestionPapers []struct {
+		ExamID          primitive.ObjectID `bson:"exam_id" json:"exam_id"`
 		QuestionPaperID primitive.ObjectID `bson:"question_paper_id" json:"question_paper_id"`
 		AnswerSheetID   primitive.ObjectID `bson:"answer_sheet_id" json:"answer_sheet_id"`
 	} `bson:"question_papers" json:"question_papers"`
@@ -43,7 +44,7 @@ type Exam struct {
 
 type Question struct {
 	Question string   `bson:"question" json:"question"`
-	Types    []string `bson:"types" json:"types" validate:"dive,oneof=html css js jquery php nodejs mongodb python java"`
+	Types    []string `bson:"types" json:"types" validate:"dive,oneof=html css js jquery php nodejs mongodb python java text none"`
 	Level    string   `bson:"level" json:"level" validate:"oneof=easy medium hard"`
 }
 
@@ -51,4 +52,27 @@ type QuestionPaper struct {
 	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	Set       int                `bson:"set" json:"set"`
 	Questions []Question         `bson:"questions" json:"questions"`
+}
+
+type AnswerSheet struct {
+	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	StudentName string             `bson:"student_name" json:"student_name"`
+	Email       string             `bson:"email" json:"email"`
+	GoogleID    string             `bson:"google_id,omitempty" json:"google_id,omitempty"`
+	ExamName    string             `bson:"exam_name" json:"exam_name"`
+	ExamID      primitive.ObjectID `bson:"exam_id" json:"exam_id"`
+	ExamType    string             `bson:"exam_type" json:"exam_type" validate:"oneof=external internal viva"`
+	QPaperID    primitive.ObjectID `bson:"qpaper_id" json:"qpaper_id"`
+	Set         int                `bson:"set" json:"set"`
+	Data        []struct {
+		Question string `bson:"question" json:"question"`
+		Answers  []struct {
+			Type string `bson:"type" json:"type"`
+			Ans  string `bson:"ans" json:"ans"`
+		} `bson:"answers" json:"answers"`
+	} `bson:"data" json:"data"`
+	Status    string   `bson:"status" json:"status" validate:"oneof=didnotstart started ended internal"`
+	Submitted bool     `bson:"submitted" json:"submitted" default:"false"`
+	AIScore   *float64 `bson:"ai_score,omitempty" json:"ai_score,omitempty"`
+	Duration  int64    `bson:"duration" json:"duration"` // Duration field added
 }
