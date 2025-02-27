@@ -5,9 +5,11 @@ import { Toaster, toast } from 'react-hot-toast';
 import Allapi from '../../utils/common';
 
 function ExamSession() {
-  const { id, answerSheetId } = useParams();
+  const { id, qpaper_id } = useParams();
+  console.log("qpaper_id: ", qpaper_id);
+  const [answerSheetId, setAnswerSheetId] = useState();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [questionPaper, setQuestionPaper] = useState(null);
   const [answerSheet, setAnswerSheet] = useState(null);
   const [answers, setAnswers] = useState([]);
@@ -21,11 +23,11 @@ function ExamSession() {
       try {
         setLoading(true);
         
-        // Fetch answer sheet data
-        const answerSheetResponse = await fetch(`${Allapi.backapi}/exam/answersheet/${answerSheetId}`, {
+        // Fetch answer sheet data - Fix the URL construction here
+        const answerSheetResponse = await fetch(`${Allapi.backapi}/exam/answer-sheet/${id}`, {
           headers: {
             'Authorization': `${localStorage.getItem('token')}`
-          }
+          },
         });
         
         if (!answerSheetResponse.ok) {
@@ -36,12 +38,14 @@ function ExamSession() {
         
         const answerSheetData = await answerSheetResponse.json();
         setAnswerSheet(answerSheetData);
+        console.log("answer sheet data: ", answerSheetData);
+        setAnswerSheetId(answerSheetData.id);
         
         // Initialize time left
         setTimeLeft(answerSheetData.duration * 60); // Convert minutes to seconds
         
         // Fetch question paper
-        const questionPaperResponse = await fetch(Allapi.getQuestionPaper.url(answerSheetData.qpaper_id), {
+        const questionPaperResponse = await fetch(`${Allapi.getQuestionPaper.url(qpaper_id)}`, {
           headers: {
             'Authorization': `${localStorage.getItem('token')}`
           }
@@ -75,16 +79,14 @@ function ExamSession() {
       }
     };
     
-    if (answerSheetId) {
-      fetchExamData();
-    }
+    fetchExamData();
     
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
-  }, [answerSheetId, navigate]);
+  }, [id, qpaper_id, navigate]);
   
   useEffect(() => {
     if (timeLeft > 0 && !loading) {
@@ -131,6 +133,8 @@ function ExamSession() {
         },
         body: JSON.stringify({ answers })
       });
+
+      console.log("answers: ",JSON.stringify({ answers }))
       
       if (response.ok) {
         toast.success('Exam submitted successfully');
@@ -147,7 +151,7 @@ function ExamSession() {
   
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="relative w-16 h-16">
           <div className="absolute w-full h-full border-4 border-green-500 rounded-full border-t-transparent animate-spin"></div>
           <div className="absolute border-4 border-green-300 rounded-full top-1 left-1 w-14 h-14 border-t-transparent animate-spin" style={{ animationDuration: '1.5s' }}></div>

@@ -17,9 +17,11 @@ function StudentExams() {
           }
         });
         if (response.ok) {
-          const data = await response.json();
-          setExams(data);
-          console.log("exams data in students panel: ",response)
+            let data = await response.json();
+            if (!data) {
+              data = [];
+            }
+            setExams(data);
         } else {
           const error = await response.json();
           console.error('Failed to fetch available exams:', error);

@@ -76,7 +76,8 @@ func AuthMiddleware(requiredRole string) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		fmt.Println("user: ", user)
+		// fmt.Println("userrole: ", user.Role)
+		// fmt.Println("required role: ", requiredRole)
 		// Check if user has the required role
 		if user.Role != requiredRole {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})

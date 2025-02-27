@@ -17,6 +17,7 @@ function ExamEntryPoint() {
     const assignQuestionPaper = async () => {
       try {
         setLoading(true);
+        console.log("id ",id)
         const response = await fetch(`${Allapi.assignSetAndCreateAnswerSheet.url}/${id}`, {
           method: Allapi.assignSetAndCreateAnswerSheet.method,
           headers: {
@@ -24,8 +25,11 @@ function ExamEntryPoint() {
           }
         });
 
+        
+
         if (response.ok) {
           const data = await response.json();
+        //   console.log("data: ",data)
           setAnswerSheet(data);
           
           // Fetch exam details if needed
@@ -95,10 +99,11 @@ function ExamEntryPoint() {
           'Authorization': `${localStorage.getItem('token')}`
         }
       });
-
+      
       if (response.ok) {
+        console.log("answersheet: ",answerSheet.qpaper_id)
         toast.success('Exam started successfully');
-        navigate(`/student/exams/${id}/session/${answerSheet._id}`);
+        navigate(`/exams/${answerSheet._id}/session/${answerSheet.qpaper_id}`);
       } else {
         const error = await response.json();
         toast.error(error.error || 'Failed to start exam');
@@ -186,7 +191,7 @@ function ExamEntryPoint() {
             </div>
             
             <div className="flex flex-wrap justify-center gap-4">
-              {(answerSheet.exam_type === 'internal' || answerSheet.status === 'internal') && (
+
                 <button
                   onClick={fetchQuestionPaper}
                   className="flex items-center px-6 py-3 text-purple-400 transition-all duration-300 rounded-lg bg-purple-500/20 hover:bg-purple-500/30"
@@ -194,15 +199,15 @@ function ExamEntryPoint() {
                   <FileText className="w-5 h-5 mr-2" />
                   View Questions
                 </button>
-              )}
               
+                {(answerSheet.exam_type != 'internal' ) && (
               <button
                 onClick={startExam}
                 className="flex items-center px-6 py-3 text-white transition-all duration-300 bg-green-500 rounded-lg hover:bg-green-600"
               >
                 <Play className="w-5 h-5 mr-2" />
                 Start Exam
-              </button>
+              </button>)}
             </div>
           </div>
         </div>

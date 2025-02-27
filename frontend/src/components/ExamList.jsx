@@ -18,6 +18,9 @@ function ExamsList() {
         });
         if (response.ok) {
           const data = await response.json();
+          if (data===null ){
+            data = []
+          }
           setExams(data);
         } else {
           const error = await response.json();

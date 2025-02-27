@@ -14,7 +14,7 @@ func ExamRoutes(r *gin.Engine) {
 		exam.POST("/exam/create-sets", controllers.CreateSetsForExam)
 		exam.GET("/qpaper/:id", controllers.GetQuestionPaperByID)
 		exam.GET("/getallexams", controllers.GetAllExams)
-		exam.GET("/getexambyid", middleware.TeacherMiddleware(), controllers.GetExamById)
+		exam.GET("/getexambyid", controllers.GetExamById)
 		exam.GET("/getexamsbycontainer", middleware.TeacherMiddleware(), controllers.GetExamsByTeacherContainer)
 
 		exam.GET("/getexamsbydate", middleware.StudentMiddleware(), controllers.GetAvailableExamsByDate)
@@ -22,7 +22,7 @@ func ExamRoutes(r *gin.Engine) {
 
 		exam.POST("/start-exam/:answerSheetId", middleware.StudentMiddleware(), controllers.StartExam)
 		exam.POST("/submit-exam/:answerSheetId", middleware.StudentMiddleware(), controllers.SubmitExam)
-
+		exam.GET("/answer-sheet/:id", middleware.StudentMiddleware(), controllers.GetAnswerSheetByID)
 		//student
 		//getexamsbydate
 		//getsetandcreateanswersheet-post //searches that exam id in student container
