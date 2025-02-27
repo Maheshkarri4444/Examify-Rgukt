@@ -37,6 +37,22 @@ const Allapi = {
     url: (id) => `${backapi}/exam/qpaper/${id}`,
     method: "GET",
   },
+  getExamsByDate: {
+    url: `${backapi}/exam/getexamsbydate`,
+    method: "GET",
+  },
+  assignSetAndCreateAnswerSheet: {
+    url: `${backapi}/exam/assignsetandcreateanswersheet`,
+    method: "POST",
+  },
+  startExam: {
+    url: `${backapi}/exam/start-exam`,
+    method: "POST",
+  },
+  submitExam: {
+    url: `${backapi}/exam/submit-exam`,
+    method: "POST",
+  },
   backapi
 };
 

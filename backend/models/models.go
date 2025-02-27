@@ -58,7 +58,6 @@ type AnswerSheet struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	StudentName string             `bson:"student_name" json:"student_name"`
 	Email       string             `bson:"email" json:"email"`
-	GoogleID    string             `bson:"google_id,omitempty" json:"google_id,omitempty"`
 	ExamName    string             `bson:"exam_name" json:"exam_name"`
 	ExamID      primitive.ObjectID `bson:"exam_id" json:"exam_id"`
 	ExamType    string             `bson:"exam_type" json:"exam_type" validate:"oneof=external internal viva"`

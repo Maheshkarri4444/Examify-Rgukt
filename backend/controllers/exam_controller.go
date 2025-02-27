@@ -324,7 +324,7 @@ func GetAvailableExamsByDate(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
+	fmt.Println("exams data : ", exams)
 	c.JSON(http.StatusOK, exams)
 }
 
