@@ -103,8 +103,8 @@ func GoogleCallback(c *gin.Context) {
 			teacherContainer := models.TeacherContainer{
 				ID: containerID,
 				Exams: []struct {
-					ExamID       primitive.ObjectID `bson:"exam_id" json:"exam_id"`
-					EvaluationID primitive.ObjectID `bson:"evaluation_id" json:"evaluation_id"`
+					ExamID       primitive.ObjectID   `bson:"exam_id" json:"exam_id"`
+					EvaluationID []primitive.ObjectID `bson:"evaluation_id" json:"evaluation_id"`
 				}{},
 			}
 			teacherContainerCollection.InsertOne(context.TODO(), teacherContainer)

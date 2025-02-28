@@ -31,6 +31,7 @@ func main() {
 
 	routes.AuthRoutes(r)
 	routes.ExamRoutes(r)
+	routes.AiRoutes(r)
 
 	port := os.Getenv("PORT")
 	if port == "" {

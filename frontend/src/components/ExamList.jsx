@@ -17,7 +17,7 @@ function ExamsList() {
           }
         });
         if (response.ok) {
-          const data = await response.json();
+          let data = await response.json();
           if (data===null ){
             data = []
           }

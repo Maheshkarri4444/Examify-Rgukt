@@ -17,28 +17,37 @@ function ExamEntryPoint() {
     const assignQuestionPaper = async () => {
       try {
         setLoading(true);
-        console.log("id ",id)
+  
+        // Check if answerSheet already exists in localStorage
+        const savedAnswerSheet = localStorage.getItem('answerSheet');
+        if (savedAnswerSheet) {
+          setAnswerSheet(JSON.parse(savedAnswerSheet));
+        //   setLoading(false);
+        //   return;
+        }
+  
         const response = await fetch(`${Allapi.assignSetAndCreateAnswerSheet.url}/${id}`, {
           method: Allapi.assignSetAndCreateAnswerSheet.method,
           headers: {
             'Authorization': `${localStorage.getItem('token')}`
           }
         });
-
-        
-
+  
         if (response.ok) {
           const data = await response.json();
-        //   console.log("data: ",data)
+          console.log("answersheet data: ",data)
           setAnswerSheet(data);
-          
-          // Fetch exam details if needed
+  
+          // Store answerSheet in localStorage
+          localStorage.setItem('answerSheet', JSON.stringify(data));
+  
+          // Fetch exam details
           const examResponse = await fetch(Allapi.getExamById.url(id), {
             headers: {
               'Authorization': `${localStorage.getItem('token')}`
             }
           });
-          
+  
           if (examResponse.ok) {
             const examData = await examResponse.json();
             setExamDetails(examData);
@@ -54,11 +63,12 @@ function ExamEntryPoint() {
         setLoading(false);
       }
     };
-
+  
     if (id) {
       assignQuestionPaper();
     }
   }, [id]);
+  
 
   const fetchQuestionPaper = async () => {
     if (!answerSheet || !answerSheet.qpaper_id) {
@@ -104,6 +114,7 @@ function ExamEntryPoint() {
         console.log("answersheet: ",answerSheet.qpaper_id)
         toast.success('Exam started successfully');
         navigate(`/exams/${answerSheet._id}/session/${answerSheet.qpaper_id}`);
+        localStorage.removeItem('answerSheet')
       } else {
         const error = await response.json();
         toast.error(error.error || 'Failed to start exam');

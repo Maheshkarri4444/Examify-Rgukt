@@ -161,7 +161,7 @@ func GetExamsByTeacherContainer(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding exam"})
 			return
 		}
-
+		fmt.Println("exam answersheets: ", exam.AnswerSheets)
 		// Only add exams that have NO answer sheets
 		if len(exam.AnswerSheets) == 0 {
 			exams = append(exams, exam)
@@ -498,7 +498,7 @@ func AssignSetAndCreateAnswerSheet(c *gin.Context) {
 		Name         string               `bson:"exam_name"`
 		ExamType     string               `bson:"exam_type"`
 		Sets         []primitive.ObjectID `bson:"sets"`
-		AnswerSheets []primitive.ObjectID `bson:"answersheets"`
+		AnswerSheets []primitive.ObjectID `bson:"answer_sheets"`
 		Duration     int64                `bson:"duration"`
 	}
 	err = examCollection.FindOne(context.TODO(), bson.M{"_id": examObjID}).Decode(&exam)
@@ -591,7 +591,7 @@ func AssignSetAndCreateAnswerSheet(c *gin.Context) {
 	ansSheetID := result.InsertedID.(primitive.ObjectID)
 
 	// Update exam data to store answer sheet ID
-	examCollection.UpdateOne(context.TODO(), bson.M{"_id": examObjID}, bson.M{"$push": bson.M{"answersheets": ansSheetID}})
+	examCollection.UpdateOne(context.TODO(), bson.M{"_id": examObjID}, bson.M{"$push": bson.M{"answer_sheets": ansSheetID}})
 
 	// Update student's container with assigned question paper
 	_, err = studentContainerCollection.UpdateOne(context.TODO(),
@@ -721,7 +721,8 @@ func GetAnswerSheetByID(c *gin.Context) {
 }
 
 func GetAllAnswerSheetsByExamID(c *gin.Context) {
-	examID := c.Param("examId") // Get exam ID from URL params
+	examID := c.Param("examid") // Get exam ID from URL params
+	fmt.Println("getallanswersheets function called")
 
 	// Convert examID to ObjectID
 	objID, err := primitive.ObjectIDFromHex(examID)
@@ -739,13 +740,16 @@ func GetAllAnswerSheetsByExamID(c *gin.Context) {
 
 	cursor, err := answerSheetCollection.Find(ctx, filter)
 	if err != nil {
+		fmt.Println("error here at cursor")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch answer sheets"})
 		return
 	}
 	defer cursor.Close(ctx)
 
-	// Prepare result array
-	var answerSheets []bson.M
+	// Use a map to store unique answer sheets
+	uniqueSheets := make(map[primitive.ObjectID]bson.M)
+
+	// Iterate over cursor
 	for cursor.Next(ctx) {
 		var answerSheet models.AnswerSheet
 		if err := cursor.Decode(&answerSheet); err != nil {
@@ -753,8 +757,8 @@ func GetAllAnswerSheetsByExamID(c *gin.Context) {
 			return
 		}
 
-		// Append only required fields to response
-		answerSheets = append(answerSheets, bson.M{
+		// Store unique answer sheets using map
+		uniqueSheets[answerSheet.ID] = bson.M{
 			"id":          answerSheet.ID,
 			"studentName": answerSheet.StudentName,
 			"email":       answerSheet.Email,
@@ -762,7 +766,13 @@ func GetAllAnswerSheetsByExamID(c *gin.Context) {
 			"set":         answerSheet.Set,
 			"status":      answerSheet.Status,
 			"submitted":   answerSheet.Submitted,
-		})
+		}
+	}
+
+	// Convert map to slice
+	var answerSheets []bson.M
+	for _, sheet := range uniqueSheets {
+		answerSheets = append(answerSheets, sheet)
 	}
 
 	// Return response
@@ -772,7 +782,7 @@ func GetAllAnswerSheetsByExamID(c *gin.Context) {
 var evaluationCollection *mongo.Collection = config.GetCollection(config.Client, "evalutions")
 
 func CreateEvaluationByAnswerSheetID(c *gin.Context) {
-	answerSheetID := c.Param("answerSheetId")
+	answerSheetID := c.Param("answersheetid")
 
 	// Convert answerSheetID to ObjectID
 	objID, err := primitive.ObjectIDFromHex(answerSheetID)
@@ -844,7 +854,7 @@ func CreateEvaluationByAnswerSheetID(c *gin.Context) {
 }
 
 func GetEvaluationByID(c *gin.Context) {
-	evaluationID := c.Param("evaluationId")
+	evaluationID := c.Param("evaluationid")
 
 	// Convert evaluationID to ObjectID
 	objID, err := primitive.ObjectIDFromHex(evaluationID)
@@ -866,4 +876,49 @@ func GetEvaluationByID(c *gin.Context) {
 
 	// Return evaluation details
 	c.JSON(http.StatusOK, evaluation)
+}
+
+func UpdateEvaluation(c *gin.Context) {
+	evaluationID := c.Param("evaluationId")
+
+	// Convert evaluationID to ObjectID
+	objID, err := primitive.ObjectIDFromHex(evaluationID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid evaluation ID"})
+		return
+	}
+
+	// Parse request body
+	var requestBody struct {
+		Data []struct {
+			Question     string `json:"question"`
+			Marks        int    `json:"marks"`
+			AIEvaluation string `json:"ai_evaluation"`
+		} `json:"data"`
+		TotalMarks int `json:"total_marks"`
+	}
+
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Update evaluation in MongoDB
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	update := bson.M{
+		"$set": bson.M{
+			"data":        requestBody.Data,
+			"total_marks": requestBody.TotalMarks,
+		},
+	}
+
+	_, err = evaluationCollection.UpdateOne(ctx, bson.M{"_id": objID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update evaluation"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Evaluation updated successfully"})
 }

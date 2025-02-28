@@ -26,8 +26,10 @@ func ExamRoutes(r *gin.Engine) {
 		exam.POST("/submit-exam/:answerSheetId", middleware.StudentMiddleware(), controllers.SubmitExam)
 		exam.GET("/answer-sheet/:id", middleware.StudentMiddleware(), controllers.GetAnswerSheetByID)
 
-		exam.GET("/getallanswersheetsbyexamid", middleware.TeacherMiddleware(), controllers.GetAllAnswerSheetsByExamID)
-
+		exam.GET("/getallanswersheetsbyexamid/:examid", middleware.TeacherMiddleware(), controllers.GetAllAnswerSheetsByExamID)
+		exam.GET("/createevaluation/:answersheetid", middleware.TeacherMiddleware(), controllers.CreateEvaluationByAnswerSheetID)
+		exam.GET("/getevaluation/:evaluationid", middleware.TeacherMiddleware(), controllers.GetEvaluationByID)
+		exam.PUT("/updateevaluation/:evaluationId", middleware.TeacherMiddleware(), controllers.UpdateEvaluation)
 		//student
 		//getexamsbydate
 		//getsetandcreateanswersheet-post //searches that exam id in student container

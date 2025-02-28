@@ -6,6 +6,9 @@ import TeacherOutlet from './components/TeacherOutlet';
 import ExamsList from './components/ExamList';
 import CreateExam from './components/CreateExam';
 import ExamDetails from './components/ExamDetails';
+import TeacherEvaluations from './components/TeacherEvaluations';
+import AnswerSheetsList from './components/AnswerSheetsList';
+import EvaluationForm from './components/EvaluationForm';
 import StudentOutlet from './components/student/StudentOutlet';
 import StudentExams from './components/student/StudentExams';
 import StudentResults from './components/student/StudentResults';
@@ -25,7 +28,9 @@ function App() {
             <Route path="exams" element={<ExamsList />} />
             <Route path="exams/:id" element={<ExamDetails />} />
             <Route path="exams/create" element={<CreateExam />} />
-            <Route path="evaluations" element={<div className="text-white">Evaluations Page</div>} />
+            <Route path="evaluations" element={<TeacherEvaluations />} />
+            <Route path="evaluations/:examId" element={<AnswerSheetsList />} />
+            <Route path="evaluations/grade/:evaluationId" element={<EvaluationForm />} />
           </Route>
           
           {/* Student Routes */}
