@@ -75,3 +75,24 @@ type AnswerSheet struct {
 	AIScore   *float64 `bson:"ai_score,omitempty" json:"ai_score,omitempty"`
 	Duration  int64    `bson:"duration" json:"duration"` // Duration field added
 }
+
+type Evaluation struct {
+	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	AnswerSheetID primitive.ObjectID `bson:"answer_sheet_id" json:"answer_sheet_id"`
+	StudentName   string             `bson:"student_name" json:"student_name"`
+	Email         string             `bson:"email" json:"email"`
+	ExamName      string             `bson:"exam_name" json:"exam_name"`
+	QPaperID      primitive.ObjectID `bson:"qpaper_id" json:"qpaper_id"`
+	Set           int                `bson:"set" json:"set"`
+	AIScore       *float64           `bson:"ai_score,omitempty" json:"ai_score,omitempty"`
+	Data          []struct {
+		Question string `bson:"question" json:"question"`
+		Answers  []struct {
+			Type string `bson:"type" json:"type"`
+			Ans  string `bson:"ans" json:"ans"`
+		} `bson:"answers" json:"answers"`
+		AIEvaluation string `bson:"ai_evaluation" json:"ai_evaluation"`
+		Marks        int    `bson:"marks" json:"marks"`
+	} `bson:"data" json:"data"`
+	TotalMarks int `bson:"total_marks" json:"total_marks"`
+}

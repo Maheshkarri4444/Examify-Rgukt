@@ -660,3 +660,151 @@ func GetAnswerSheetByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, answerSheet)
 }
+
+func GetAllAnswerSheetsByExamID(c *gin.Context) {
+	examID := c.Param("examId") // Get exam ID from URL params
+
+	// Convert examID to ObjectID
+	objID, err := primitive.ObjectIDFromHex(examID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid exam ID"})
+		return
+	}
+
+	// Define MongoDB filter
+	filter := bson.M{"exam_id": objID}
+
+	// Query MongoDB
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cursor, err := answerSheetCollection.Find(ctx, filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch answer sheets"})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	// Prepare result array
+	var answerSheets []bson.M
+	for cursor.Next(ctx) {
+		var answerSheet models.AnswerSheet
+		if err := cursor.Decode(&answerSheet); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding answer sheet"})
+			return
+		}
+
+		// Append only required fields to response
+		answerSheets = append(answerSheets, bson.M{
+			"id":          answerSheet.ID,
+			"studentName": answerSheet.StudentName,
+			"email":       answerSheet.Email,
+			"qpaperId":    answerSheet.QPaperID,
+			"set":         answerSheet.Set,
+			"status":      answerSheet.Status,
+			"submitted":   answerSheet.Submitted,
+		})
+	}
+
+	// Return response
+	c.JSON(http.StatusOK, answerSheets)
+}
+
+var evaluationCollection *mongo.Collection = config.GetCollection(config.Client, "evalutions")
+
+func CreateEvaluationByAnswerSheetID(c *gin.Context) {
+	answerSheetID := c.Param("answerSheetId")
+
+	// Convert answerSheetID to ObjectID
+	objID, err := primitive.ObjectIDFromHex(answerSheetID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid answer sheet ID"})
+		return
+	}
+
+	// Fetch the AnswerSheet
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	var answerSheet models.AnswerSheet
+	err = answerSheetCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&answerSheet)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Answer sheet not found"})
+		return
+	}
+
+	// Prepare evaluation data
+	evaluation := models.Evaluation{
+		ID:            primitive.NewObjectID(),
+		AnswerSheetID: answerSheet.ID,
+		StudentName:   answerSheet.StudentName,
+		Email:         answerSheet.Email,
+		ExamName:      answerSheet.ExamName,
+		QPaperID:      answerSheet.QPaperID,
+		Set:           answerSheet.Set,
+		AIScore:       answerSheet.AIScore,
+		Data: []struct {
+			Question string `bson:"question" json:"question"`
+			Answers  []struct {
+				Type string `bson:"type" json:"type"`
+				Ans  string `bson:"ans" json:"ans"`
+			} `bson:"answers" json:"answers"`
+			AIEvaluation string `bson:"ai_evaluation" json:"ai_evaluation"`
+			Marks        int    `bson:"marks" json:"marks"`
+		}{},
+		TotalMarks: 0,
+	}
+
+	// Copy data from answer sheet and add empty evaluation fields
+	for _, q := range answerSheet.Data {
+		evalData := struct {
+			Question string `bson:"question" json:"question"`
+			Answers  []struct {
+				Type string `bson:"type" json:"type"`
+				Ans  string `bson:"ans" json:"ans"`
+			} `bson:"answers" json:"answers"`
+			AIEvaluation string `bson:"ai_evaluation" json:"ai_evaluation"`
+			Marks        int    `bson:"marks" json:"marks"`
+		}{
+			Question: q.Question,
+			Answers:  q.Answers,
+			Marks:    0, // Marks field empty initially
+		}
+
+		evaluation.Data = append(evaluation.Data, evalData)
+	}
+
+	// Insert evaluation into DB
+	_, err = evaluationCollection.InsertOne(ctx, evaluation)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create evaluation"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Evaluation created successfully", "evaluation_id": evaluation.ID})
+}
+
+func GetEvaluationByID(c *gin.Context) {
+	evaluationID := c.Param("evaluationId")
+
+	// Convert evaluationID to ObjectID
+	objID, err := primitive.ObjectIDFromHex(evaluationID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid evaluation ID"})
+		return
+	}
+
+	// Fetch evaluation from DB
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	var evaluation models.Evaluation
+	err = evaluationCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&evaluation)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Evaluation not found"})
+		return
+	}
+
+	// Return evaluation details
+	c.JSON(http.StatusOK, evaluation)
+}
