@@ -15,7 +15,9 @@ func ExamRoutes(r *gin.Engine) {
 		exam.GET("/qpaper/:id", controllers.GetQuestionPaperByID)
 		exam.GET("/getallexams", controllers.GetAllExams)
 		exam.GET("/getexambyid", controllers.GetExamById)
+
 		exam.GET("/getexamsbycontainer", middleware.TeacherMiddleware(), controllers.GetExamsByTeacherContainer)
+		exam.GET("/getfinishedexamsbycontainer", middleware.TeacherMiddleware(), controllers.GetFinishedExamsByTeacherContainerID)
 
 		exam.GET("/getexamsbydate", middleware.StudentMiddleware(), controllers.GetAvailableExamsByDate)
 		exam.POST("/assignsetandcreateanswersheet/:qpaperid", middleware.StudentMiddleware(), controllers.AssignSetAndCreateAnswerSheet)

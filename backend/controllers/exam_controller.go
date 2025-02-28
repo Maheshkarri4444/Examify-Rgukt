@@ -131,18 +131,21 @@ func GetExamsByTeacherContainer(c *gin.Context) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	// Fetch teacher's container
 	err := teacherContainerCollection.FindOne(ctx, bson.M{"_id": containerID}).Decode(&teacherContainer)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Teacher container not found"})
 		return
 	}
-	fmt.Println("teacher container: ", teacherContainer)
-	examIDs := make([]primitive.ObjectID, len(teacherContainer.Exams))
-	for i, e := range teacherContainer.Exams {
-		examIDs[i] = e.ExamID
+
+	// Extract exam IDs
+	examIDs := make([]primitive.ObjectID, 0)
+	for _, e := range teacherContainer.Exams {
+		examIDs = append(examIDs, e.ExamID)
 	}
 
-	var exams []models.Exam
+	// Fetch exams from database
 	cursor, err := examCollection.Find(ctx, bson.M{"_id": bson.M{"$in": examIDs}})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch exams"})
@@ -150,16 +153,72 @@ func GetExamsByTeacherContainer(c *gin.Context) {
 	}
 	defer cursor.Close(ctx)
 
+	// Filter exams (remove those with answer sheets)
+	var exams []models.Exam
 	for cursor.Next(ctx) {
 		var exam models.Exam
 		if err := cursor.Decode(&exam); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding exam"})
 			return
 		}
-		exams = append(exams, exam)
+
+		// Only add exams that have NO answer sheets
+		if len(exam.AnswerSheets) == 0 {
+			exams = append(exams, exam)
+		}
 	}
-	// fmt.Println("exams: ", exams)
+
 	c.JSON(http.StatusOK, exams)
+}
+
+func GetFinishedExamsByTeacherContainerID(c *gin.Context) {
+	containerID := c.MustGet("container_id").(primitive.ObjectID)
+	var teacherContainer struct {
+		Exams []struct {
+			ExamID primitive.ObjectID `bson:"exam_id"`
+		} `bson:"exams"`
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Fetch teacher's container
+	err := teacherContainerCollection.FindOne(ctx, bson.M{"_id": containerID}).Decode(&teacherContainer)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Teacher container not found"})
+		return
+	}
+
+	// Extract exam IDs
+	examIDs := make([]primitive.ObjectID, 0)
+	for _, e := range teacherContainer.Exams {
+		examIDs = append(examIDs, e.ExamID)
+	}
+
+	// Fetch exams from database
+	cursor, err := examCollection.Find(ctx, bson.M{"_id": bson.M{"$in": examIDs}})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch exams"})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	// Filter exams (keep only those with at least one answer sheet)
+	var finishedExams []models.Exam
+	for cursor.Next(ctx) {
+		var exam models.Exam
+		if err := cursor.Decode(&exam); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding exam"})
+			return
+		}
+
+		// Only add exams that have at least one answer sheet
+		if len(exam.AnswerSheets) > 0 {
+			finishedExams = append(finishedExams, exam)
+		}
+	}
+
+	c.JSON(http.StatusOK, finishedExams)
 }
 
 var questionPaperCollection *mongo.Collection = config.GetCollection(config.Client, "question_papers")
