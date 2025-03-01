@@ -82,6 +82,7 @@ type Evaluation struct {
 	StudentName   string             `bson:"student_name" json:"student_name"`
 	Email         string             `bson:"email" json:"email"`
 	ExamName      string             `bson:"exam_name" json:"exam_name"`
+	ExamID        primitive.ObjectID `bson:"exam_id" json"exam_id"`
 	QPaperID      primitive.ObjectID `bson:"qpaper_id" json:"qpaper_id"`
 	Set           int                `bson:"set" json:"set"`
 	AIScore       *float64           `bson:"ai_score,omitempty" json:"ai_score,omitempty"`
@@ -94,5 +95,6 @@ type Evaluation struct {
 		AIEvaluation string `bson:"ai_evaluation" json:"ai_evaluation"`
 		Marks        int    `bson:"marks" json:"marks"`
 	} `bson:"data" json:"data"`
-	TotalMarks int `bson:"total_marks" json:"total_marks"`
+	TotalMarks int  `bson:"total_marks" json:"total_marks"`
+	Evaluated  bool `bson:"evaluated" json:"evaluated"`
 }

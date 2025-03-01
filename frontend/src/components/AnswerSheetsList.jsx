@@ -40,8 +40,11 @@ function AnswerSheetsList() {
         }
 
         const answerSheetsData = await answerSheetsResponse.json();
-        console.log("answer sheets data: ",answerSheetsData)
-        setAnswerSheets(answerSheetsData);
+        // console.log("answer sheets data: ",answerSheetsData)
+        if (answerSheetsData === null ){
+          setAnswerSheets([])
+        }else{
+        setAnswerSheets(answerSheetsData);}
       } catch (error) {
         console.error('Error fetching data:', error);
         toast.error('Failed to load exam data');
@@ -110,9 +113,6 @@ function AnswerSheetsList() {
           <div className="flex flex-col items-center justify-center py-20 space-y-4">
             <FileText className="w-16 h-16 text-gray-500" />
             <h2 className="text-2xl font-bold text-white">No Answer Sheets Found</h2>
-            <p className="text-gray-400">
-              {searchTerm ? 'No answer sheets match your search criteria' : 'No students have submitted this exam yet'}
-            </p>
           </div>
         ) : (
           <>

@@ -135,7 +135,8 @@ function EvaluationForm() {
       // Update evaluation data with marks
       const updatedData = evaluation.data.map((item, index) => ({
         ...item,
-        marks: marks[index]
+        marks: marks[index], // Preserve marks
+        answers: item.answers // Ensure answers are retained
       }));
       
       const response = await fetch(`${Allapi.backapi}/exam/updateevaluation/${evaluationId}`, {
@@ -146,7 +147,8 @@ function EvaluationForm() {
         },
         body: JSON.stringify({
           data: updatedData,
-          total_marks: totalMarks
+          total_marks: totalMarks,
+          evaluated: true // Set evaluated to true only when submit is clicked
         })
       });
 
@@ -162,7 +164,8 @@ function EvaluationForm() {
     } finally {
       setSaving(false);
     }
-  };
+};
+
 
   if (loading) {
     return (

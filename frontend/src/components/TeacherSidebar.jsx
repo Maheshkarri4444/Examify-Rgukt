@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { ClipboardList, FileCheck } from 'lucide-react';
+import { ClipboardList, FileCheck, Award } from 'lucide-react';
 
 export default function TeacherSidebar() {
   return (
@@ -36,6 +36,20 @@ export default function TeacherSidebar() {
         >
           <FileCheck className="w-5 h-5" />
           <span>Evaluations</span>
+        </NavLink>
+        
+        <NavLink
+          to="/teacher/results"
+          className={({ isActive }) =>
+            `flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 ${
+              isActive
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'hover:bg-gray-700/50 text-gray-300'
+            }`
+          }
+        >
+          <Award className="w-5 h-5" />
+          <span>Results</span>
         </NavLink>
       </nav>
     </div>

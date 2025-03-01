@@ -33,6 +33,8 @@ func main() {
 	routes.ExamRoutes(r)
 	routes.AiRoutes(r)
 
+	r.SetTrustedProxies(nil) // Only for development
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

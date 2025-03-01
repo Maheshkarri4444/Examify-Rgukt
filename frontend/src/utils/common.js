@@ -53,6 +53,14 @@ const Allapi = {
     url: `${backapi}/exam/submit-exam`,
     method: "POST",
   },
+  getEvaluatedExams: {
+    url: `${backapi}/exam/getevaluatedexams`,
+    method: "GET",
+  },
+  getStudentsAndMarks: {
+    url: (examId) => `${backapi}/exam/getstudentsandmarks?examid=${examId}`,
+    method: "GET",
+  },
   backapi
 };
 

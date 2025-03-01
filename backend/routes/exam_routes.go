@@ -30,6 +30,9 @@ func ExamRoutes(r *gin.Engine) {
 		exam.GET("/createevaluation/:answersheetid", middleware.TeacherMiddleware(), controllers.CreateEvaluationByAnswerSheetID)
 		exam.GET("/getevaluation/:evaluationid", middleware.TeacherMiddleware(), controllers.GetEvaluationByID)
 		exam.PUT("/updateevaluation/:evaluationId", middleware.TeacherMiddleware(), controllers.UpdateEvaluation)
+
+		exam.GET("/getevaluatedexams", middleware.TeacherMiddleware(), controllers.GetEvaluatedExamsByTeacherContainer)
+		exam.GET("/getstudentsandmarks/:examid", middleware.TeacherMiddleware(), controllers.GetAllStudentDetailsAndMarksByExamID)
 		//student
 		//getexamsbydate
 		//getsetandcreateanswersheet-post //searches that exam id in student container
@@ -45,8 +48,13 @@ func ExamRoutes(r *gin.Engine) {
 		//aievaluate-post
 
 		//result
-		//getevalutionpaperbyansid
-		//getresultsbyexamid
+		//teacher
+		//getevaluatedexamsbycontainer
+		//getAllmarksandstudentdetails
+
+		//student
+		//getallexamsbyStudent -- returns container exams
+		//getevaluationpaper by examid email
 
 	}
 

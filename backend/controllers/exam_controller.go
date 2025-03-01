@@ -746,10 +746,28 @@ func GetAllAnswerSheetsByExamID(c *gin.Context) {
 	}
 	defer cursor.Close(ctx)
 
-	// Use a map to store unique answer sheets
-	uniqueSheets := make(map[primitive.ObjectID]bson.M)
+	// Fetch evaluated answer sheets where evaluated is true
+	evaluatedSheetsCursor, err := evaluationCollection.Find(ctx, bson.M{"evaluated": true})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch evaluated answer sheets"})
+		return
+	}
+	defer evaluatedSheetsCursor.Close(ctx)
 
-	// Iterate over cursor
+	evaluatedSheetIDs := make(map[primitive.ObjectID]bool)
+
+	for evaluatedSheetsCursor.Next(ctx) {
+		var evaluation models.Evaluation
+		if err := evaluatedSheetsCursor.Decode(&evaluation); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding evaluation"})
+			return
+		}
+		evaluatedSheetIDs[evaluation.AnswerSheetID] = true
+	}
+
+	// Prepare answer sheets list excluding evaluated ones
+	var answerSheets []bson.M
+
 	for cursor.Next(ctx) {
 		var answerSheet models.AnswerSheet
 		if err := cursor.Decode(&answerSheet); err != nil {
@@ -757,8 +775,11 @@ func GetAllAnswerSheetsByExamID(c *gin.Context) {
 			return
 		}
 
-		// Store unique answer sheets using map
-		uniqueSheets[answerSheet.ID] = bson.M{
+		if _, evaluated := evaluatedSheetIDs[answerSheet.ID]; evaluated {
+			continue
+		}
+
+		answerSheets = append(answerSheets, bson.M{
 			"id":          answerSheet.ID,
 			"studentName": answerSheet.StudentName,
 			"email":       answerSheet.Email,
@@ -766,20 +787,14 @@ func GetAllAnswerSheetsByExamID(c *gin.Context) {
 			"set":         answerSheet.Set,
 			"status":      answerSheet.Status,
 			"submitted":   answerSheet.Submitted,
-		}
-	}
-
-	// Convert map to slice
-	var answerSheets []bson.M
-	for _, sheet := range uniqueSheets {
-		answerSheets = append(answerSheets, sheet)
+		})
 	}
 
 	// Return response
 	c.JSON(http.StatusOK, answerSheets)
 }
 
-var evaluationCollection *mongo.Collection = config.GetCollection(config.Client, "evalutions")
+var evaluationCollection *mongo.Collection = config.GetCollection(config.Client, "evaluations")
 
 func CreateEvaluationByAnswerSheetID(c *gin.Context) {
 	answerSheetID := c.Param("answersheetid")
@@ -791,10 +806,19 @@ func CreateEvaluationByAnswerSheetID(c *gin.Context) {
 		return
 	}
 
-	// Fetch the AnswerSheet
+	// Check if evaluation already exists for this answer sheet
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	var existingEvaluation models.Evaluation
+	err = evaluationCollection.FindOne(ctx, bson.M{"answer_sheet_id": objID}).Decode(&existingEvaluation)
+	if err == nil {
+		// Evaluation already exists, return its ID
+		c.JSON(http.StatusOK, gin.H{"message": "Evaluation already exists", "evaluation_id": existingEvaluation.ID})
+		return
+	}
+
+	// Fetch the AnswerSheet
 	var answerSheet models.AnswerSheet
 	err = answerSheetCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&answerSheet)
 	if err != nil {
@@ -809,6 +833,7 @@ func CreateEvaluationByAnswerSheetID(c *gin.Context) {
 		StudentName:   answerSheet.StudentName,
 		Email:         answerSheet.Email,
 		ExamName:      answerSheet.ExamName,
+		ExamID:        answerSheet.ExamID,
 		QPaperID:      answerSheet.QPaperID,
 		Set:           answerSheet.Set,
 		AIScore:       answerSheet.AIScore,
@@ -822,6 +847,7 @@ func CreateEvaluationByAnswerSheetID(c *gin.Context) {
 			Marks        int    `bson:"marks" json:"marks"`
 		}{},
 		TotalMarks: 0,
+		Evaluated:  false,
 	}
 
 	// Copy data from answer sheet and add empty evaluation fields
@@ -844,13 +870,22 @@ func CreateEvaluationByAnswerSheetID(c *gin.Context) {
 	}
 
 	// Insert evaluation into DB
-	_, err = evaluationCollection.InsertOne(ctx, evaluation)
+	res, err := evaluationCollection.InsertOne(ctx, evaluation)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create evaluation"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Evaluation created successfully", "evaluation_id": evaluation.ID})
+	// Get teacher container and update with new evaluation ID
+	teacherContainerFilter := bson.M{"exams.exam_id": answerSheet.ExamID}
+	update := bson.M{"$push": bson.M{"exams.$.evaluation_id": evaluation.ID}}
+	_, err = teacherContainerCollection.UpdateOne(ctx, teacherContainerFilter, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update teacher container"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Evaluation created successfully", "evaluation_id": res.InsertedID})
 }
 
 func GetEvaluationByID(c *gin.Context) {
@@ -894,8 +929,13 @@ func UpdateEvaluation(c *gin.Context) {
 			Question     string `json:"question"`
 			Marks        int    `json:"marks"`
 			AIEvaluation string `json:"ai_evaluation"`
+			Answers      []struct {
+				Type string `json:"type"`
+				Ans  string `json:"ans"`
+			} `json:"answers"`
 		} `json:"data"`
-		TotalMarks int `json:"total_marks"`
+		TotalMarks int  `json:"total_marks"`
+		Evaluated  bool `json:"evaluated"`
 	}
 
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
@@ -911,6 +951,7 @@ func UpdateEvaluation(c *gin.Context) {
 		"$set": bson.M{
 			"data":        requestBody.Data,
 			"total_marks": requestBody.TotalMarks,
+			"evaluated":   requestBody.Evaluated,
 		},
 	}
 
@@ -921,4 +962,117 @@ func UpdateEvaluation(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Evaluation updated successfully"})
+}
+
+//results
+
+func GetEvaluatedExamsByTeacherContainer(c *gin.Context) {
+	containerID := c.MustGet("container_id").(primitive.ObjectID)
+
+	var teacherContainer models.TeacherContainer
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Fetch the teacher's container
+	err := teacherContainerCollection.FindOne(ctx, bson.M{"_id": containerID}).Decode(&teacherContainer)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Teacher container not found"})
+		return
+	}
+
+	fmt.Println("Teacher Container:", teacherContainer)
+
+	var evaluatedExams []bson.M
+
+	// Fetch exams that have at least one evaluation marked as evaluated
+	for _, exam := range teacherContainer.Exams {
+		if len(exam.EvaluationID) == 0 {
+			continue
+		}
+
+		fmt.Println("Exam ID:", exam.ExamID, "Evaluation IDs:", exam.EvaluationID)
+
+		var evaluations []models.Evaluation
+		filter := bson.M{
+			"_id":       bson.M{"$in": exam.EvaluationID},
+			"evaluated": true,
+		}
+		fmt.Println("MongoDB Query:", filter)
+		cursor, err := evaluationCollection.Find(ctx, filter)
+		fmt.Println("cursor: ", cursor)
+		if err != nil {
+			fmt.Println("Error finding evaluation collection:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch evaluated exams"})
+			return
+		}
+		defer cursor.Close(ctx)
+
+		if err := cursor.All(ctx, &evaluations); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding evaluations"})
+			return
+		}
+
+		if len(evaluations) > 0 {
+			fmt.Println("Evaluations found:", evaluations)
+
+			// Fetch the exam name
+			var examDetails models.Exam
+			err := examCollection.FindOne(ctx, bson.M{"_id": exam.ExamID}).Decode(&examDetails)
+			if err != nil {
+				fmt.Println("Error fetching exam details:", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch exam details"})
+				return
+			}
+
+			fmt.Println("Exam Name:", examDetails.ExamName)
+
+			evaluatedExams = append(evaluatedExams, bson.M{
+				"exam_id":       exam.ExamID,
+				"exam_name":     examDetails.ExamName,
+				"evaluation_id": exam.EvaluationID,
+			})
+		}
+	}
+
+	c.JSON(http.StatusOK, evaluatedExams)
+}
+
+func GetAllStudentDetailsAndMarksByExamID(c *gin.Context) {
+	examID := c.Param("examid")
+
+	// Convert examID to ObjectID
+	objID, err := primitive.ObjectIDFromHex(examID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid exam ID"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Fetch all evaluations for the given exam ID
+	cursor, err := evaluationCollection.Find(ctx, bson.M{"exam_id": objID})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch evaluations"})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	var studentDetails []bson.M
+	for cursor.Next(ctx) {
+		var evaluation models.Evaluation
+		if err := cursor.Decode(&evaluation); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding evaluation"})
+			return
+		}
+
+		studentDetails = append(studentDetails, bson.M{
+			"student_name": evaluation.StudentName,
+			"email":        evaluation.Email,
+			"total_marks":  evaluation.TotalMarks,
+			"evaluated":    evaluation.Evaluated,
+		})
+	}
+	fmt.Println("student details: ", studentDetails)
+	c.JSON(http.StatusOK, studentDetails)
 }

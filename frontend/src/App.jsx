@@ -9,6 +9,8 @@ import ExamDetails from './components/ExamDetails';
 import TeacherEvaluations from './components/TeacherEvaluations';
 import AnswerSheetsList from './components/AnswerSheetsList';
 import EvaluationForm from './components/EvaluationForm';
+import TeacherResults from './components/TeacherResults';
+import StudentResultsList from './components/StudentResultsList';
 import StudentOutlet from './components/student/StudentOutlet';
 import StudentExams from './components/student/StudentExams';
 import StudentResults from './components/student/StudentResults';
@@ -31,6 +33,8 @@ function App() {
             <Route path="evaluations" element={<TeacherEvaluations />} />
             <Route path="evaluations/:examId" element={<AnswerSheetsList />} />
             <Route path="evaluations/grade/:evaluationId" element={<EvaluationForm />} />
+            <Route path="results" element={<TeacherResults />} />
+            <Route path="results/:examId" element={<StudentResultsList />} />
           </Route>
           
           {/* Student Routes */}
