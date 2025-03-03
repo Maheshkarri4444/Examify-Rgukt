@@ -94,7 +94,7 @@ function TeacherResults() {
               <div key={index} className="flex flex-col overflow-hidden transition-all duration-300 bg-gray-800 border border-gray-700 rounded-lg hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10">
                 <div className="p-6 space-y-4">
                   <div className="flex items-start justify-between">
-                    <h3 className="text-xl font-bold text-white">Exam: {exam.exam_id}</h3>
+                    <h3 className="text-xl font-bold text-white">Exam: {exam.exam_name}</h3>
                     <span className="px-3 py-1 text-xs font-medium text-green-400 rounded-full bg-green-500/20">
                       Evaluated
                     </span>

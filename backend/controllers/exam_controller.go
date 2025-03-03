@@ -964,8 +964,6 @@ func UpdateEvaluation(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Evaluation updated successfully"})
 }
 
-//results
-
 func GetEvaluatedExamsByTeacherContainer(c *gin.Context) {
 	containerID := c.MustGet("container_id").(primitive.ObjectID)
 
@@ -980,56 +978,40 @@ func GetEvaluatedExamsByTeacherContainer(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("Teacher Container:", teacherContainer)
-
 	var evaluatedExams []bson.M
 
-	// Fetch exams that have at least one evaluation marked as evaluated
+	// Iterate through exams and fetch only those with evaluated sheets
 	for _, exam := range teacherContainer.Exams {
 		if len(exam.EvaluationID) == 0 {
 			continue
 		}
 
-		fmt.Println("Exam ID:", exam.ExamID, "Evaluation IDs:", exam.EvaluationID)
-
 		var evaluations []models.Evaluation
-		filter := bson.M{
-			"_id":       bson.M{"$in": exam.EvaluationID},
-			"evaluated": true,
-		}
-		fmt.Println("MongoDB Query:", filter)
-		cursor, err := evaluationCollection.Find(ctx, filter)
-		fmt.Println("cursor: ", cursor)
-		if err != nil {
-			fmt.Println("Error finding evaluation collection:", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch evaluated exams"})
-			return
-		}
-		defer cursor.Close(ctx)
 
-		if err := cursor.All(ctx, &evaluations); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding evaluations"})
-			return
+		for _, evalID := range exam.EvaluationID {
+			fmt.Println("evalId: ", evalID)
+			var evaluation models.Evaluation
+			err := evaluationCollection.FindOne(ctx, bson.M{"_id": evalID, "evaluated": true}).Decode(&evaluation)
+			if err == nil { // Only append if the document exists
+				evaluations = append(evaluations, evaluation)
+			}
 		}
-
+		fmt.Println("evalutions data: ", evaluations)
 		if len(evaluations) > 0 {
-			fmt.Println("Evaluations found:", evaluations)
-
-			// Fetch the exam name
+			// Fetch exam details
 			var examDetails models.Exam
 			err := examCollection.FindOne(ctx, bson.M{"_id": exam.ExamID}).Decode(&examDetails)
 			if err != nil {
-				fmt.Println("Error fetching exam details:", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch exam details"})
 				return
 			}
 
-			fmt.Println("Exam Name:", examDetails.ExamName)
-
+			// Append evaluated exam details to response
 			evaluatedExams = append(evaluatedExams, bson.M{
 				"exam_id":       exam.ExamID,
 				"exam_name":     examDetails.ExamName,
 				"evaluation_id": exam.EvaluationID,
+				"evaluations":   evaluations,
 			})
 		}
 	}
@@ -1050,8 +1032,8 @@ func GetAllStudentDetailsAndMarksByExamID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Fetch all evaluations for the given exam ID
-	cursor, err := evaluationCollection.Find(ctx, bson.M{"exam_id": objID})
+	// Fetch only evaluated evaluations for the given exam ID
+	cursor, err := evaluationCollection.Find(ctx, bson.M{"exam_id": objID, "evaluated": true})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch evaluations"})
 		return
@@ -1062,8 +1044,7 @@ func GetAllStudentDetailsAndMarksByExamID(c *gin.Context) {
 	for cursor.Next(ctx) {
 		var evaluation models.Evaluation
 		if err := cursor.Decode(&evaluation); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding evaluation"})
-			return
+			continue // Skip decoding errors and process remaining records
 		}
 
 		studentDetails = append(studentDetails, bson.M{
@@ -1073,6 +1054,6 @@ func GetAllStudentDetailsAndMarksByExamID(c *gin.Context) {
 			"evaluated":    evaluation.Evaluated,
 		})
 	}
-	fmt.Println("student details: ", studentDetails)
+
 	c.JSON(http.StatusOK, studentDetails)
 }
