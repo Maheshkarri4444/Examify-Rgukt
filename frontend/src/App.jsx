@@ -44,7 +44,6 @@ function App() {
             <Route index element={<Navigate to="exams" replace />} />
             <Route path="exams" element={<StudentExams />} />
             <Route path="exams/:id" element={<ExamEntryPoint />} />
-            <Route path="results" element={<StudentResults />} />
           </Route>
           <Route path="exams/:id/session/:qpaper_id" element={<ExamSession />} />
         </Routes>

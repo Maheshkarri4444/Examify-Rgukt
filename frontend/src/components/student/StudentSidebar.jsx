@@ -23,20 +23,6 @@ export default function StudentSidebar() {
           <ClipboardList className="w-5 h-5" />
           <span>Exams</span>
         </NavLink>
-        
-        <NavLink
-          to="/student/results"
-          className={({ isActive }) =>
-            `flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 ${
-              isActive
-                ? 'bg-green-500/20 text-green-400'
-                : 'hover:bg-gray-700/50 text-gray-300'
-            }`
-          }
-        >
-          <Award className="w-5 h-5" />
-          <span>Results</span>
-        </NavLink>
       </nav>
     </div>
   );
