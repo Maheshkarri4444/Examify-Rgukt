@@ -22,7 +22,6 @@ import PreventBack from './pages/PreventBack';
 function App() {
   return (
     <Router>
-    <PreventBack/>
       <div className="min-h-screen bg-gray-900">
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />

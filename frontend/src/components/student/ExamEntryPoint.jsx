@@ -98,8 +98,13 @@ function ExamEntryPoint() {
 
   const startExam = async () => {
     if (!answerSheet || !answerSheet._id) {
+      const savedAnswerSheet = localStorage.getItem('answerSheet');
+      if (savedAnswerSheet) {
+        setAnswerSheet(JSON.parse(savedAnswerSheet));
+      }else{
       toast.error('Answer sheet ID not found');
       return;
+    }
     }
 
     try {

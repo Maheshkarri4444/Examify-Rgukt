@@ -6,7 +6,7 @@ import Allapi from '../../utils/common';
 
 function ExamSession() {
   const { id, qpaper_id } = useParams();
-  console.log("qpaper_id: ", qpaper_id);
+  // console.log("qpaper_id: ", qpaper_id);
   const [answerSheetId, setAnswerSheetId] = useState();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -40,7 +40,7 @@ function ExamSession() {
         
         const answerSheetData = await answerSheetResponse.json();
         setAnswerSheet(answerSheetData);
-        console.log("answer sheet data: ", answerSheetData);
+        // console.log("answer sheet data: ", answerSheetData);
         setAnswerSheetId(answerSheetData.id);
         
         // Initialize time left
