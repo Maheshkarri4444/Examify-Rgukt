@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, User, Mail, FileText, CheckCircle, AlertTriangle, Cpu } from 'lucide-react';
+import { ArrowLeft, Save, User, Mail, FileText, CheckCircle, AlertTriangle, Brain } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import Allapi from '../utils/common';
 
-function EvaluationForm() {
+function ViewEvaluation() {
   const { evaluationId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -13,7 +13,6 @@ function EvaluationForm() {
   const [marks, setMarks] = useState([]);
   const [totalMarks, setTotalMarks] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [aiEvaluating, setAiEvaluating] = useState(false);
 
   useEffect(() => {
     const fetchEvaluation = async () => {
@@ -50,95 +49,15 @@ function EvaluationForm() {
     fetchEvaluation();
   }, [evaluationId]);
 
-  // Effect to trigger AI evaluation when question changes
-  useEffect(() => {
-    if (evaluation && !loading) {
-      const currentQuestion = evaluation.data[activeQuestionIndex];
-      // Only trigger AI evaluation if there are answers and no existing AI evaluation
-      if (currentQuestion && 
-          currentQuestion.answers.some(a => a.ans.trim()) && 
-          !currentQuestion.ai_evaluation) {
-        handleAiEvaluate();
-      }
-    }
-  }, [activeQuestionIndex, evaluation]);
-
   const handleMarkChange = (index, value) => {
     const newMarks = [...marks];
-    const parsedValue = parseInt(value);
+    const parsedValue = parseInt(value) || 0;
     newMarks[index] = parsedValue;
     setMarks(newMarks);
     
     // Update total marks
     const total = newMarks.reduce((sum, mark) => sum + mark, 0);
     setTotalMarks(total);
-  };
-
-  const handleAiEvaluate = async () => {
-    try {
-      setAiEvaluating(true);
-      const currentQuestion = evaluation.data[activeQuestionIndex];
-      
-      // Prepare the prompt for AI
-      let prompt = `Please evaluate the following answer to this question:\n\n`;
-      prompt += `Question: ${currentQuestion.question}\n\n`;
-      
-      // Add all answers
-      prompt += `Answers:\n`;
-      currentQuestion.answers.forEach(answer => {
-        if (answer.ans.trim()) {
-          prompt += `${answer.type.toUpperCase()}: ${answer.ans}\n\n`;
-        }
-      });
-      
-      prompt += `Please provide two things:\n`;
-      prompt += `1. A brief evaluation of the answer quality and correctness (2-3 sentences maximum).\n`;
-      prompt += `2. A percentage score from 0-100% that represents how good the answer is.\n\n`;
-      prompt += `Format your response as follows:\n`;
-      prompt += `Evaluation: [Your brief evaluation]\n`;
-      prompt += `Score: [percentage]%`;
-      
-      // Call the AI API
-      const response = await fetch(`${Allapi.backapi}/ai/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          prompt: prompt
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to get AI evaluation');
-      }
-      
-      const data = await response.json();
-      
-      // Update the evaluation with AI feedback
-      const updatedEvaluation = { ...evaluation };
-      updatedEvaluation.data[activeQuestionIndex].ai_evaluation = data.response;
-      
-      // Try to extract percentage score
-      try {
-        const scoreMatch = data.response.match(/Score:\s*(\d+)%/i);
-        if (scoreMatch && scoreMatch[1]) {
-          updatedEvaluation.data[activeQuestionIndex].ai_score = parseInt(scoreMatch[1]);
-        }
-      } catch (err) {
-        console.error('Error parsing AI score:', err);
-      }
-      
-      setEvaluation(updatedEvaluation);
-      
-      toast.success('AI evaluation completed');
-    } catch (error) {
-      console.error('Error getting AI evaluation:', error);
-      toast.error('Failed to get AI evaluation');
-    } finally {
-      setAiEvaluating(false);
-    }
   };
 
   const handleSaveEvaluation = async () => {
@@ -148,8 +67,8 @@ function EvaluationForm() {
       // Update evaluation data with marks
       const updatedData = evaluation.data.map((item, index) => ({
         ...item,
-        marks: marks[index], // Preserve marks
-        answers: item.answers // Ensure answers are retained
+        marks: marks[index],
+        answers: item.answers
       }));
       
       const response = await fetch(`${Allapi.backapi}/exam/updateevaluation/${evaluationId}`, {
@@ -161,7 +80,7 @@ function EvaluationForm() {
         body: JSON.stringify({
           data: updatedData,
           total_marks: totalMarks,
-          evaluated: true // Set evaluated to true only when submit is clicked
+          evaluated: true
         })
       });
 
@@ -219,7 +138,7 @@ function EvaluationForm() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl font-bold text-white">Evaluation</h1>
+            <h1 className="text-3xl font-bold text-white">View Evaluation</h1>
             <p className="text-gray-400">{evaluation.exam_name}</p>
           </div>
         </div>
@@ -251,7 +170,7 @@ function EvaluationForm() {
               {evaluation.ai_score && (
                 <div className="px-4 py-2 rounded-lg bg-blue-500/20">
                   <span className="text-sm text-gray-400">AI Score:</span>
-                  <span className="ml-2 text-blue-400">{evaluation.ai_score.toFixed(2)}</span>
+                  <span className="ml-2 text-blue-400">{evaluation.ai_score}</span>
                 </div>
               )}
             </div>
@@ -311,44 +230,12 @@ function EvaluationForm() {
                 </div>
               ))}
             </div>
-            
-            {/* AI Evaluation Status */}
-            {aiEvaluating && (
-              <div className="flex items-center justify-center p-4 space-x-2 text-blue-400 rounded-lg bg-blue-500/10">
-                <div className="w-5 h-5 border-2 border-current rounded-full border-t-transparent animate-spin"></div>
-                <span>AI is evaluating this answer...</span>
-              </div>
-            )}
-            
+
             {/* AI Evaluation */}
             {currentQuestion.ai_evaluation && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-blue-400">AI Evaluation</h3>
-                  {currentQuestion.ai_score && (
-                    <div className="px-3 py-1 text-sm font-medium text-blue-400 rounded-full bg-blue-500/20">
-                      AI Score: {currentQuestion.ai_score}%
-                    </div>
-                  )}
-                </div>
-                <div className="p-5 text-white border rounded-lg bg-blue-500/10 border-blue-500/30">
-                  {currentQuestion.ai_evaluation.includes('Evaluation:') ? (
-                    <div className="space-y-3">
-                      {currentQuestion.ai_evaluation.split(/\n+/).map((line, idx) => {
-                        // Skip the Score line as we're displaying it separately
-                        if (line.trim().startsWith('Score:')) return null;
-                        
-                        return (
-                          <p key={idx} className={line.trim().startsWith('Evaluation:') ? 'font-semibold' : ''}>
-                            {line}
-                          </p>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p>{currentQuestion.ai_evaluation}</p>
-                  )}
-                </div>
+              <div className="p-5 space-y-3 text-white border rounded-lg bg-blue-500/10 border-blue-500/30">
+                <h3 className="text-lg font-medium text-blue-400">AI Evaluation</h3>
+                <p>{currentQuestion.ai_evaluation}</p>
               </div>
             )}
             
@@ -415,4 +302,4 @@ function EvaluationForm() {
   );
 }
 
-export default EvaluationForm;
+export default ViewEvaluation;

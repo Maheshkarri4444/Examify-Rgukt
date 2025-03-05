@@ -16,6 +16,7 @@ import StudentExams from './components/student/StudentExams';
 import StudentResults from './components/student/StudentResults';
 import ExamEntryPoint from './components/student/ExamEntryPoint';
 import ExamSession from './components/student/ExamSession';
+import ViewEvaluation from './components/ViewEvaluation';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
             <Route path="evaluations/grade/:evaluationId" element={<EvaluationForm />} />
             <Route path="results" element={<TeacherResults />} />
             <Route path="results/:examId" element={<StudentResultsList />} />
+            <Route path="evaluation/:evaluationId" element={<ViewEvaluation />} />
           </Route>
           
           {/* Student Routes */}

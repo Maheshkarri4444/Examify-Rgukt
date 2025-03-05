@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, User, Mail, FileText, Save } from 'lucide-react';
+import { Clock, User, Mail, FileText, Save, Brain } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import Allapi from '../../utils/common';
 
@@ -10,6 +10,8 @@ function ExamSession() {
   const [answerSheetId, setAnswerSheetId] = useState();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [aiEvaluating, setAiEvaluating] = useState(false);
+  const [aiScore, setAiScore] = useState(null);
   const [questionPaper, setQuestionPaper] = useState(null);
   const [answerSheet, setAnswerSheet] = useState(null);
   const [answers, setAnswers] = useState([]);
@@ -94,7 +96,7 @@ function ExamSession() {
         setTimeLeft(prev => {
           if (prev <= 1) {
             clearInterval(timerRef.current);
-            submitExam();
+            handleSubmitWithAI();
             return 0;
           }
           return prev - 1;
@@ -122,8 +124,57 @@ function ExamSession() {
     newAnswers[questionIndex].answers[typeIndex].ans = value;
     setAnswers(newAnswers);
   };
+
+  const generateAIScore = async () => {
+    try {
+      // Prepare the prompt with questions and answers
+      const prompt = `Please evaluate these exam answers and provide only a numerical score out of 100. No explanation needed, just the number.\n\nQuestions and Answers:\n${answers.map(a => 
+        `Question: ${a.question}\nAnswers: ${a.answers.map(ans => 
+          `\n${ans.type}: ${ans.ans}`
+        ).join('')}\n`
+      ).join('\n')}`;
+
+      const response = await fetch(`${Allapi.backapi}/ai/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ prompt })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate AI score');
+      }
+
+      const data = await response.json();
+      // Extract just the number from the AI response
+      const score = parseFloat(data.response.match(/\d+/)[0]);
+      return Math.min(100, Math.max(0, score)); // Ensure score is between 0 and 100
+    } catch (error) {
+      console.error('Error generating AI score:', error);
+      throw error;
+    }
+  };
   
-  const submitExam = async () => {
+  const handleSubmitWithAI = async () => {
+    try {
+      setAiEvaluating(true);
+      const score = await generateAIScore();
+      setAiScore(score);
+      
+      // Wait for 2 seconds to show the score
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Submit exam with AI score
+      await submitExam(score);
+    } catch (error) {
+      toast.error('Failed to evaluate answers');
+      setAiEvaluating(false);
+    }
+  };
+
+  const submitExam = async (score) => {
     try {
       const response = await fetch(`${Allapi.backapi}/exam/submit-exam/${answerSheetId}`, {
         method: 'POST',
@@ -131,11 +182,12 @@ function ExamSession() {
           'Content-Type': 'application/json',
           'Authorization': `${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ answers })
+        body: JSON.stringify({ 
+          answers,
+          ai_score: score
+        })
       });
 
-      console.log("answers: ",JSON.stringify({ answers }))
-      
       if (response.ok) {
         toast.success('Exam submitted successfully');
         navigate('/student/exams');
@@ -146,6 +198,8 @@ function ExamSession() {
     } catch (error) {
       console.error('Error submitting exam:', error);
       toast.error('Failed to submit exam');
+    } finally {
+      setAiEvaluating(false);
     }
   };
   
@@ -156,6 +210,28 @@ function ExamSession() {
           <div className="absolute w-full h-full border-4 border-green-500 rounded-full border-t-transparent animate-spin"></div>
           <div className="absolute border-4 border-green-300 rounded-full top-1 left-1 w-14 h-14 border-t-transparent animate-spin" style={{ animationDuration: '1.5s' }}></div>
         </div>
+      </div>
+    );
+  }
+
+  if (aiEvaluating) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen space-y-6">
+        {aiScore === null ? (
+          <>
+            <Brain className="w-16 h-16 text-green-500 animate-pulse" />
+            <h2 className="text-2xl font-bold text-white">AI is evaluating your answers...</h2>
+            <div className="w-48 h-2 bg-gray-700 rounded-full">
+              <div className="h-full bg-green-500 rounded-full animate-[width] duration-1000" style={{ width: '60%' }}></div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="text-6xl font-bold text-green-500">{aiScore}</div>
+            <p className="text-xl text-white">Your AI-Generated Score</p>
+            <p className="text-gray-400">Submitting your exam...</p>
+          </>
+        )}
       </div>
     );
   }
@@ -293,7 +369,7 @@ function ExamSession() {
               </button>
             ) : (
               <button
-                onClick={submitExam}
+                onClick={handleSubmitWithAI}
                 className="flex items-center px-6 py-2 text-white transition-all duration-300 bg-green-500 rounded-lg hover:bg-green-600"
               >
                 <Save className="w-5 h-5 mr-2" />

@@ -161,7 +161,7 @@ func GetExamsByTeacherContainer(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding exam"})
 			return
 		}
-		fmt.Println("exam answersheets: ", exam.AnswerSheets)
+		// fmt.Println("exam answersheets: ", exam.AnswerSheets)
 		// Only add exams that have NO answer sheets
 		if len(exam.AnswerSheets) == 0 {
 			exams = append(exams, exam)
@@ -647,6 +647,7 @@ func SubmitExam(c *gin.Context) {
 				Ans  string `json:"ans"`
 			} `json:"answers"`
 		} `json:"answers"`
+		AIScore *float64 `json:"ai_score,omitempty"`
 	}
 
 	// Bind request body
@@ -690,6 +691,7 @@ func SubmitExam(c *gin.Context) {
 			"status":    "ended",
 			"submitted": true,
 			"data":      answerSheet.Data,
+			"ai_score":  requestBody.AIScore,
 		},
 	}
 
@@ -722,7 +724,7 @@ func GetAnswerSheetByID(c *gin.Context) {
 
 func GetAllAnswerSheetsByExamID(c *gin.Context) {
 	examID := c.Param("examid") // Get exam ID from URL params
-	fmt.Println("getallanswersheets function called")
+	// fmt.Println("getallanswersheets function called")
 
 	// Convert examID to ObjectID
 	objID, err := primitive.ObjectIDFromHex(examID)
@@ -989,14 +991,14 @@ func GetEvaluatedExamsByTeacherContainer(c *gin.Context) {
 		var evaluations []models.Evaluation
 
 		for _, evalID := range exam.EvaluationID {
-			fmt.Println("evalId: ", evalID)
+			// fmt.Println("evalId: ", evalID)
 			var evaluation models.Evaluation
 			err := evaluationCollection.FindOne(ctx, bson.M{"_id": evalID, "evaluated": true}).Decode(&evaluation)
 			if err == nil { // Only append if the document exists
 				evaluations = append(evaluations, evaluation)
 			}
 		}
-		fmt.Println("evalutions data: ", evaluations)
+		// fmt.Println("evalutions data: ", evaluations)
 		if len(evaluations) > 0 {
 			// Fetch exam details
 			var examDetails models.Exam
