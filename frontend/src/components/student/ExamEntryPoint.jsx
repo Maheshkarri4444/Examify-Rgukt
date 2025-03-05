@@ -35,7 +35,7 @@ function ExamEntryPoint() {
   
         if (response.ok) {
           const data = await response.json();
-          console.log("answersheet data: ",data)
+          // console.log("answersheet data: ",data)
           setAnswerSheet(data);
   
           // Store answerSheet in localStorage

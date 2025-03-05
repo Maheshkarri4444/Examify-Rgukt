@@ -17,10 +17,12 @@ import StudentResults from './components/student/StudentResults';
 import ExamEntryPoint from './components/student/ExamEntryPoint';
 import ExamSession from './components/student/ExamSession';
 import ViewEvaluation from './components/ViewEvaluation';
+import PreventBack from './pages/PreventBack';
 
 function App() {
   return (
     <Router>
+    <PreventBack/>
       <div className="min-h-screen bg-gray-900">
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />

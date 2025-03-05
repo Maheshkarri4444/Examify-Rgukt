@@ -11,7 +11,7 @@ function StudentExams() {
   useEffect(() => {
     const fetchExams = async () => {
       try {
-        localStorage.removeItem('answerSheet')
+        // localStorage.removeItem('answerSheet')
         const response = await fetch(Allapi.getExamsByDate.url, {
           headers: {
             'Authorization': `${localStorage.getItem('token')}`
